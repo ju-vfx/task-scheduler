@@ -12,3 +12,7 @@ INSERT INTO clients (
     $1, $2, NOW(), NOW()
 )
 RETURNING *;
+
+-- name: DeleteClients :exec
+TRUNCATE clients
+RESTART IDENTITY;

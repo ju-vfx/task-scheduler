@@ -12,14 +12,12 @@ import (
 )
 
 type server struct {
-	conf string
-	db   *database.Queries
+	db *database.Queries
 }
 
 func newServer() (*server, error) {
 	srv := server{
-		conf: "testconf",
-		db:   connectDb(),
+		db: connectDb(),
 	}
 	return &srv, nil
 }
@@ -56,4 +54,8 @@ func connectDb() *database.Queries {
 
 func registerHandlers(s *server) {
 	http.HandleFunc("GET /", s.handlerRoot)
+	http.HandleFunc("POST /api/clients", s.handlerAddClient)
+	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
+		http.HandleFunc("DELETE /api/clients", s.handlerDeleteClients)
+	}
 }

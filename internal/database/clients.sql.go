@@ -36,6 +36,16 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Cli
 	return i, err
 }
 
+const deleteClients = `-- name: DeleteClients :exec
+TRUNCATE clients
+RESTART IDENTITY
+`
+
+func (q *Queries) DeleteClients(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteClients)
+	return err
+}
+
 const getClient = `-- name: GetClient :one
 SELECT id, host, ip_addr, connected_at, last_seen_at FROM clients
 WHERE id = $1
