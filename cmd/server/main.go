@@ -13,6 +13,9 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	server := newServer()
+	server, err := newServer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	server.Start()
 }
