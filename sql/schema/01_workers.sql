@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE clients (
+CREATE TABLE workers (
     id SERIAL PRIMARY KEY,
     host TEXT NOT NULL,
     ip_addr TEXT NOT NULL,
@@ -8,4 +8,4 @@ CREATE TABLE clients (
 );
 
 -- +goose Down
-DROP TABLE clients;
+DROP TABLE workers;

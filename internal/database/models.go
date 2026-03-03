@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type Client struct {
+type Worker struct {
 	ID          int32
 	Host        string
 	IpAddr      string
