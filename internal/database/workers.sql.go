@@ -7,38 +7,40 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createWorker = `-- name: CreateWorker :one
 INSERT INTO workers (
-    host, ip_addr, connected_at, last_seen_at
+    id, host, port, connected_at, last_seen_at
 ) VALUES (
-    $1, $2, NOW(), NOW()
+    gen_random_uuid(), $1, $2, NOW(), NOW()
 )
-RETURNING id, host, ip_addr, connected_at, last_seen_at
+RETURNING id, host, port, connected_at, last_seen_at, status
 `
 
 type CreateWorkerParams struct {
-	Host   string
-	IpAddr string
+	Host string
+	Port string
 }
 
 func (q *Queries) CreateWorker(ctx context.Context, arg CreateWorkerParams) (Worker, error) {
-	row := q.db.QueryRowContext(ctx, createWorker, arg.Host, arg.IpAddr)
+	row := q.db.QueryRowContext(ctx, createWorker, arg.Host, arg.Port)
 	var i Worker
 	err := row.Scan(
 		&i.ID,
 		&i.Host,
-		&i.IpAddr,
+		&i.Port,
 		&i.ConnectedAt,
 		&i.LastSeenAt,
+		&i.Status,
 	)
 	return i, err
 }
 
 const deleteWorkers = `-- name: DeleteWorkers :exec
-TRUNCATE workers
-RESTART IDENTITY
+DELETE FROM workers
 `
 
 func (q *Queries) DeleteWorkers(ctx context.Context) error {
@@ -47,25 +49,26 @@ func (q *Queries) DeleteWorkers(ctx context.Context) error {
 }
 
 const getWorker = `-- name: GetWorker :one
-SELECT id, host, ip_addr, connected_at, last_seen_at FROM workers
+SELECT id, host, port, connected_at, last_seen_at, status FROM workers
 WHERE id = $1
 `
 
-func (q *Queries) GetWorker(ctx context.Context, id int32) (Worker, error) {
+func (q *Queries) GetWorker(ctx context.Context, id uuid.UUID) (Worker, error) {
 	row := q.db.QueryRowContext(ctx, getWorker, id)
 	var i Worker
 	err := row.Scan(
 		&i.ID,
 		&i.Host,
-		&i.IpAddr,
+		&i.Port,
 		&i.ConnectedAt,
 		&i.LastSeenAt,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getWorkers = `-- name: GetWorkers :many
-SELECT id, host, ip_addr, connected_at, last_seen_at FROM workers
+SELECT id, host, port, connected_at, last_seen_at, status FROM workers
 `
 
 func (q *Queries) GetWorkers(ctx context.Context) ([]Worker, error) {
@@ -80,9 +83,10 @@ func (q *Queries) GetWorkers(ctx context.Context) ([]Worker, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Host,
-			&i.IpAddr,
+			&i.Port,
 			&i.ConnectedAt,
 			&i.LastSeenAt,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -95,4 +99,15 @@ func (q *Queries) GetWorkers(ctx context.Context) ([]Worker, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateLastSeen = `-- name: UpdateLastSeen :exec
+UPDATE workers
+SET last_seen_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) UpdateLastSeen(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, updateLastSeen, id)
+	return err
 }

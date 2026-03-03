@@ -7,12 +7,16 @@ SELECT * FROM workers;
 
 -- name: CreateWorker :one
 INSERT INTO workers (
-    host, ip_addr, connected_at, last_seen_at
+    id, host, port, connected_at, last_seen_at
 ) VALUES (
-    $1, $2, NOW(), NOW()
+    gen_random_uuid(), $1, $2, NOW(), NOW()
 )
 RETURNING *;
 
+-- name: UpdateLastSeen :exec
+UPDATE workers
+SET last_seen_at = NOW()
+WHERE id = $1;
+
 -- name: DeleteWorkers :exec
-TRUNCATE workers
-RESTART IDENTITY;
+DELETE FROM workers;

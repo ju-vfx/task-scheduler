@@ -5,13 +5,17 @@
 package database
 
 import (
+	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Worker struct {
-	ID          int32
+	ID          uuid.UUID
 	Host        string
-	IpAddr      string
+	Port        string
 	ConnectedAt time.Time
 	LastSeenAt  time.Time
+	Status      sql.NullString
 }

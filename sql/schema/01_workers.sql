@@ -1,10 +1,11 @@
 -- +goose Up
 CREATE TABLE workers (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY,
     host TEXT NOT NULL,
-    ip_addr TEXT NOT NULL,
+    port TEXT NOT NULL,
     connected_at TIMESTAMP NOT NULL,
-    last_seen_at TIMESTAMP NOT NULL
+    last_seen_at TIMESTAMP NOT NULL,
+    status TEXT
 );
 
 -- +goose Down

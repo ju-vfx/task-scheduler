@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -11,13 +12,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type server struct {
-	db *database.Queries
-}
-
 func newServer() (*server, error) {
 	srv := server{
-		db: connectDb(),
+		db:      connectDb(),
+		workers: make([]database.Worker, 0),
 	}
 	return &srv, nil
 }
@@ -28,9 +26,10 @@ func (s *server) Start() {
 	port := os.Getenv("TS_PORT")
 	addr := fmt.Sprintf("%s:%s", host, port)
 
-	log.Printf("Starting Server on http://%s", addr)
+	log.Printf("Starting Scheduler Server on http://%s", addr)
 
 	registerHandlers(s)
+	updateWorkerSlice(s)
 
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
@@ -53,9 +52,18 @@ func connectDb() *database.Queries {
 }
 
 func registerHandlers(s *server) {
-	http.HandleFunc("GET /", s.handlerRoot)
-	http.HandleFunc("POST /api/clients", s.handlerAddClient)
+	// http.HandleFunc("GET /", s.handlerRoot)
+	http.HandleFunc("GET /api/workers", s.handlerGetWorkers)
+	http.HandleFunc("POST /api/workers", s.handlerRegisterWorker)
 	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
-		http.HandleFunc("DELETE /api/clients", s.handlerDeleteClients)
+		http.HandleFunc("DELETE /api/workers", s.handlerDeleteWorkers)
 	}
+}
+
+func updateWorkerSlice(s *server) {
+	workers, err := s.db.GetWorkers(context.Background())
+	if err != nil {
+		log.Fatal("Could not get workers")
+	}
+	s.workers = workers
 }
