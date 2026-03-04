@@ -20,6 +20,6 @@ func (sdl *scheduler) Start() {
 			fmt.Println("   ", w.Host, w.Port)
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 10)
 	}
 }

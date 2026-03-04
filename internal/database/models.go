@@ -26,7 +26,7 @@ type Task struct {
 	Name         string
 	Status       string
 	ParentTaskID uuid.NullUUID
-	Command      sql.NullString
+	Command      string
 	CreatedAt    time.Time
 	FinishedAt   sql.NullTime
 	CancelledAt  sql.NullTime

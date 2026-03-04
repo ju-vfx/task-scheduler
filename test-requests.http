@@ -13,3 +13,32 @@ DELETE http://localhost:8080/api/workers
 
 ### List all workers
 GET http://localhost:8080/api/workers
+
+
+### Delete Jobs
+DELETE http://localhost:8080/api/jobs
+
+
+### Create job
+POST http://localhost:8080/api/jobs
+Content-Type: application/json
+
+{
+    "name": "jobname",
+    "tasks": [
+        {
+        "name": "taskname1",
+        "command": "testcommand1",
+        "child_tasks": [{
+            "name": "childtaskname1",
+            "command": "childtaskcommand1",
+            "child_tasks": [{}]
+            }]
+        },
+        {
+        "name": "taskname2",
+        "command": "testcommand2",
+        "child_tasks": [{}]
+        } 
+    ]
+}

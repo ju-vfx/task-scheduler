@@ -4,7 +4,7 @@ CREATE TABLE tasks (
     name TEXT NOT NULL,
     status TEXT NOT NULL,
     parent_task_id UUID,
-    command TEXT,
+    command TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL,
     finished_at TIMESTAMP,
     cancelled_at TIMESTAMP,

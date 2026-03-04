@@ -11,6 +11,45 @@ import (
 	"github.com/google/uuid"
 )
 
+const createJob = `-- name: CreateJob :one
+INSERT INTO jobs (
+    id, name, status, priority, created_at
+) VALUES (
+    gen_random_uuid(), $1, $2, $3, NOW()
+)
+RETURNING id, name, status, priority, created_at, finished_at, cancelled_at
+`
+
+type CreateJobParams struct {
+	Name     string
+	Status   string
+	Priority int32
+}
+
+func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
+	row := q.db.QueryRowContext(ctx, createJob, arg.Name, arg.Status, arg.Priority)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.Priority,
+		&i.CreatedAt,
+		&i.FinishedAt,
+		&i.CancelledAt,
+	)
+	return i, err
+}
+
+const deleteJobs = `-- name: DeleteJobs :exec
+DELETE FROM jobs
+`
+
+func (q *Queries) DeleteJobs(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteJobs)
+	return err
+}
+
 const getJob = `-- name: GetJob :one
 SELECT id, name, status, priority, created_at, finished_at, cancelled_at FROM jobs
 WHERE id = $1

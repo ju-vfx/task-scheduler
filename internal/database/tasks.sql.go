@@ -11,6 +11,46 @@ import (
 	"github.com/google/uuid"
 )
 
+const createTask = `-- name: CreateTask :one
+INSERT INTO tasks (
+    id, name, status, parent_task_id, command, created_at, job_id
+) VALUES (
+    gen_random_uuid(), $1, $2, $3, $4, NOW(), $5
+)
+RETURNING id, name, status, parent_task_id, command, created_at, finished_at, cancelled_at, job_id
+`
+
+type CreateTaskParams struct {
+	Name         string
+	Status       string
+	ParentTaskID uuid.NullUUID
+	Command      string
+	JobID        uuid.UUID
+}
+
+func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, createTask,
+		arg.Name,
+		arg.Status,
+		arg.ParentTaskID,
+		arg.Command,
+		arg.JobID,
+	)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.ParentTaskID,
+		&i.Command,
+		&i.CreatedAt,
+		&i.FinishedAt,
+		&i.CancelledAt,
+		&i.JobID,
+	)
+	return i, err
+}
+
 const getTask = `-- name: GetTask :one
 SELECT id, name, status, parent_task_id, command, created_at, finished_at, cancelled_at, job_id FROM tasks
 WHERE id = $1
