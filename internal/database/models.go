@@ -11,6 +11,28 @@ import (
 	"github.com/google/uuid"
 )
 
+type Job struct {
+	ID          uuid.UUID
+	Name        string
+	Status      string
+	Priority    int32
+	CreatedAt   time.Time
+	FinishedAt  sql.NullTime
+	CancelledAt sql.NullTime
+}
+
+type Task struct {
+	ID           uuid.UUID
+	Name         string
+	Status       string
+	ParentTaskID uuid.NullUUID
+	Command      sql.NullString
+	CreatedAt    time.Time
+	FinishedAt   sql.NullTime
+	CancelledAt  sql.NullTime
+	JobID        uuid.UUID
+}
+
 type Worker struct {
 	ID          uuid.UUID
 	Host        string

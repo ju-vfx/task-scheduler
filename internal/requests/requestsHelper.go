@@ -1,4 +1,4 @@
-package main
+package requests
 
 import (
 	"encoding/json"
@@ -6,7 +6,16 @@ import (
 	"net/http"
 )
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
+func DecodeRequest[T interface{}](req *http.Request, i T) (T, error) {
+	params := i
+	err := json.NewDecoder(req.Body).Decode(&params)
+	if err != nil {
+		return params, err
+	}
+	return params, nil
+}
+
+func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	type error struct {
 		Error string `json:"error"`
 	}
@@ -26,7 +35,7 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 	w.Write(respData)
 }
 
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	respData, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error Mashalling JSON for Response\n")
