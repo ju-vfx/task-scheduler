@@ -23,9 +23,7 @@ func main() {
 	}
 
 	conf := &appConfig{
-		db:      db,
-		workers: make([]database.Worker, 0),
-		jobs:    make([]job, 0),
+		db: db,
 	}
 
 	server, err := newServer(conf)

@@ -3,9 +3,7 @@ package main
 import "github.com/ju-vfx/task-scheduler/internal/database"
 
 type appConfig struct {
-	db      *database.Queries
-	workers []database.Worker
-	jobs    []job
+	db *database.Queries
 }
 
 type server struct {
@@ -13,7 +11,8 @@ type server struct {
 }
 
 type scheduler struct {
-	cfg *appConfig
+	cfg                   *appConfig
+	updateIntervalSeconds int
 }
 
 type job struct {

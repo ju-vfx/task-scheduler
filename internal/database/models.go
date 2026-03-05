@@ -14,7 +14,7 @@ import (
 type Job struct {
 	ID          uuid.UUID
 	Name        string
-	Status      string
+	Status      int32
 	Priority    int32
 	CreatedAt   time.Time
 	FinishedAt  sql.NullTime
@@ -22,15 +22,14 @@ type Job struct {
 }
 
 type Task struct {
-	ID           uuid.UUID
-	Name         string
-	Status       string
-	ParentTaskID uuid.NullUUID
-	Command      string
-	CreatedAt    time.Time
-	FinishedAt   sql.NullTime
-	CancelledAt  sql.NullTime
-	JobID        uuid.UUID
+	ID          uuid.UUID
+	Name        string
+	Status      int32
+	Command     string
+	CreatedAt   time.Time
+	FinishedAt  sql.NullTime
+	CancelledAt sql.NullTime
+	JobID       uuid.UUID
 }
 
 type Worker struct {
@@ -39,5 +38,5 @@ type Worker struct {
 	Port        string
 	ConnectedAt time.Time
 	LastSeenAt  time.Time
-	Status      sql.NullString
+	Status      int32
 }

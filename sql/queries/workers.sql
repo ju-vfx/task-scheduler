@@ -7,11 +7,16 @@ SELECT * FROM workers;
 
 -- name: CreateWorker :one
 INSERT INTO workers (
-    id, host, port, connected_at, last_seen_at
+    id, host, port, status, connected_at, last_seen_at
 ) VALUES (
-    gen_random_uuid(), $1, $2, NOW(), NOW()
+    gen_random_uuid(), $1, $2, $3, NOW(), NOW()
 )
 RETURNING *;
+
+-- name: UpdateWorkerStatus :exec
+UPDATE workers
+SET status = $2
+WHERE id = $1;
 
 -- name: UpdateLastSeen :exec
 UPDATE workers

@@ -13,20 +13,21 @@ import (
 
 const createWorker = `-- name: CreateWorker :one
 INSERT INTO workers (
-    id, host, port, connected_at, last_seen_at
+    id, host, port, status, connected_at, last_seen_at
 ) VALUES (
-    gen_random_uuid(), $1, $2, NOW(), NOW()
+    gen_random_uuid(), $1, $2, $3, NOW(), NOW()
 )
 RETURNING id, host, port, connected_at, last_seen_at, status
 `
 
 type CreateWorkerParams struct {
-	Host string
-	Port string
+	Host   string
+	Port   string
+	Status int32
 }
 
 func (q *Queries) CreateWorker(ctx context.Context, arg CreateWorkerParams) (Worker, error) {
-	row := q.db.QueryRowContext(ctx, createWorker, arg.Host, arg.Port)
+	row := q.db.QueryRowContext(ctx, createWorker, arg.Host, arg.Port, arg.Status)
 	var i Worker
 	err := row.Scan(
 		&i.ID,
@@ -109,5 +110,21 @@ WHERE id = $1
 
 func (q *Queries) UpdateLastSeen(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, updateLastSeen, id)
+	return err
+}
+
+const updateWorkerStatus = `-- name: UpdateWorkerStatus :exec
+UPDATE workers
+SET status = $2
+WHERE id = $1
+`
+
+type UpdateWorkerStatusParams struct {
+	ID     uuid.UUID
+	Status int32
+}
+
+func (q *Queries) UpdateWorkerStatus(ctx context.Context, arg UpdateWorkerStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateWorkerStatus, arg.ID, arg.Status)
 	return err
 }

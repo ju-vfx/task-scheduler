@@ -13,26 +13,24 @@ import (
 
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (
-    id, name, status, parent_task_id, command, created_at, job_id
+    id, name, status, command, created_at, job_id
 ) VALUES (
-    gen_random_uuid(), $1, $2, $3, $4, NOW(), $5
+    gen_random_uuid(), $1, $2, $3, NOW(), $4
 )
-RETURNING id, name, status, parent_task_id, command, created_at, finished_at, cancelled_at, job_id
+RETURNING id, name, status, command, created_at, finished_at, cancelled_at, job_id
 `
 
 type CreateTaskParams struct {
-	Name         string
-	Status       string
-	ParentTaskID uuid.NullUUID
-	Command      string
-	JobID        uuid.UUID
+	Name    string
+	Status  int32
+	Command string
+	JobID   uuid.UUID
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
 	row := q.db.QueryRowContext(ctx, createTask,
 		arg.Name,
 		arg.Status,
-		arg.ParentTaskID,
 		arg.Command,
 		arg.JobID,
 	)
@@ -41,7 +39,6 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.ID,
 		&i.Name,
 		&i.Status,
-		&i.ParentTaskID,
 		&i.Command,
 		&i.CreatedAt,
 		&i.FinishedAt,
@@ -52,7 +49,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, name, status, parent_task_id, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
 WHERE id = $1
 `
 
@@ -63,7 +60,6 @@ func (q *Queries) GetTask(ctx context.Context, id uuid.UUID) (Task, error) {
 		&i.ID,
 		&i.Name,
 		&i.Status,
-		&i.ParentTaskID,
 		&i.Command,
 		&i.CreatedAt,
 		&i.FinishedAt,
@@ -74,7 +70,7 @@ func (q *Queries) GetTask(ctx context.Context, id uuid.UUID) (Task, error) {
 }
 
 const getTasks = `-- name: GetTasks :many
-SELECT id, name, status, parent_task_id, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
 `
 
 func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
@@ -90,7 +86,6 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 			&i.ID,
 			&i.Name,
 			&i.Status,
-			&i.ParentTaskID,
 			&i.Command,
 			&i.CreatedAt,
 			&i.FinishedAt,
@@ -108,4 +103,57 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTasksByJobId = `-- name: GetTasksByJobId :many
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+WHERE job_id = $1
+`
+
+func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getTasksByJobId, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Status,
+			&i.Command,
+			&i.CreatedAt,
+			&i.FinishedAt,
+			&i.CancelledAt,
+			&i.JobID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateTaskStatus = `-- name: UpdateTaskStatus :exec
+UPDATE tasks
+SET status = $2
+WHERE id = $1
+`
+
+type UpdateTaskStatusParams struct {
+	ID     uuid.UUID
+	Status int32
+}
+
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateTaskStatus, arg.ID, arg.Status)
+	return err
 }

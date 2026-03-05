@@ -28,17 +28,11 @@ Content-Type: application/json
     "tasks": [
         {
         "name": "taskname1",
-        "command": "testcommand1",
-        "child_tasks": [{
-            "name": "childtaskname1",
-            "command": "childtaskcommand1",
-            "child_tasks": [{}]
-            }]
+        "command": "testcommand1"
         },
         {
         "name": "taskname2",
-        "command": "testcommand2",
-        "child_tasks": [{}]
+        "command": "testcommand2"
         } 
     ]
 }

@@ -22,7 +22,7 @@ RETURNING id, name, status, priority, created_at, finished_at, cancelled_at
 
 type CreateJobParams struct {
 	Name     string
-	Status   string
+	Status   int32
 	Priority int32
 }
 
@@ -76,6 +76,44 @@ SELECT id, name, status, priority, created_at, finished_at, cancelled_at FROM jo
 
 func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
 	rows, err := q.db.QueryContext(ctx, getJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Job
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Status,
+			&i.Priority,
+			&i.CreatedAt,
+			&i.FinishedAt,
+			&i.CancelledAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWaitingJobs = `-- name: GetWaitingJobs :many
+SELECT id, name, status, priority, created_at, finished_at, cancelled_at FROM jobs
+WHERE finished_at IS NULL
+AND cancelled_at IS NULL
+ORDER BY priority, created_at DESC
+`
+
+func (q *Queries) GetWaitingJobs(ctx context.Context) ([]Job, error) {
+	rows, err := q.db.QueryContext(ctx, getWaitingJobs)
 	if err != nil {
 		return nil, err
 	}

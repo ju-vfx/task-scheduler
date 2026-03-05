@@ -5,6 +5,12 @@ WHERE id = $1;
 -- name: GetJobs :many
 SELECT * FROM jobs;
 
+-- name: GetWaitingJobs :many
+SELECT * FROM jobs
+WHERE finished_at IS NULL
+AND cancelled_at IS NULL
+ORDER BY priority, created_at DESC;
+
 -- name: CreateJob :one
 INSERT INTO jobs (
     id, name, status, priority, created_at

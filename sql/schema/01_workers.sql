@@ -5,7 +5,7 @@ CREATE TABLE workers (
     port TEXT NOT NULL,
     connected_at TIMESTAMP NOT NULL,
     last_seen_at TIMESTAMP NOT NULL,
-    status TEXT
+    status INT NOT NULL
 );
 
 -- +goose Down

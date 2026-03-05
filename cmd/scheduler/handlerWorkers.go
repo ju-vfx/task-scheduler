@@ -1,25 +1,30 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/ju-vfx/task-scheduler/internal/database"
 	"github.com/ju-vfx/task-scheduler/internal/requests"
+	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
 
-func (s *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
+func (srv *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
+	workers, err := srv.cfg.db.GetWorkers(req.Context())
+	if err != nil {
+		requests.RespondWithError(w, http.StatusInternalServerError, "Error loading workers")
+		return
+	}
 	type respData struct {
 		Workers []database.Worker `json:"workers"`
 	}
-
-	data := respData{
-		Workers: s.cfg.workers,
-	}
-	requests.RespondWithJSON(w, http.StatusOK, data)
+	requests.RespondWithJSON(w, http.StatusOK, respData{
+		Workers: workers,
+	})
 }
 
-func (s *server) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
+func (srv *server) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
 
 	type workerParams struct {
 		ID   *string `json:"id"`
@@ -33,33 +38,30 @@ func (s *server) handlerRegisterWorker(w http.ResponseWriter, req *http.Request)
 	}
 
 	if reqParams.ID != nil {
-		err = s.cfg.db.UpdateLastSeen(req.Context(), uuid.MustParse(*reqParams.ID))
+		err = srv.cfg.db.UpdateLastSeen(req.Context(), uuid.MustParse(*reqParams.ID))
 		if err != nil {
 			requests.RespondWithError(w, http.StatusInternalServerError, "Error logging in worker")
 			return
 		}
-		updateWorkerSlice(s)
 	} else {
-		worker, err := s.cfg.db.CreateWorker(req.Context(), database.CreateWorkerParams{Host: reqParams.Host, Port: reqParams.Port})
+		worker, err := srv.cfg.db.CreateWorker(req.Context(), database.CreateWorkerParams{Host: reqParams.Host, Port: reqParams.Port, Status: int32(utils.StatusWaiting)})
 		if err != nil {
-			requests.RespondWithError(w, http.StatusInternalServerError, "Error adding worker")
+			requests.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("%v+", err))
 			return
 		}
 
 		type respParams struct {
 			ID string `json:"id"`
 		}
-		updateWorkerSlice(s)
 		requests.RespondWithJSON(w, http.StatusOK, respParams{ID: worker.ID.String()})
 	}
 }
 
-func (s *server) handlerDeleteWorkers(w http.ResponseWriter, req *http.Request) {
-	err := s.cfg.db.DeleteWorkers(req.Context())
+func (srv *server) handlerDeleteWorkers(w http.ResponseWriter, req *http.Request) {
+	err := srv.cfg.db.DeleteWorkers(req.Context())
 	if err != nil {
 		requests.RespondWithError(w, http.StatusBadRequest, "Error deleting workers")
 		return
 	}
-	updateWorkerSlice(s)
 	requests.RespondWithJSON(w, http.StatusOK, "")
 }

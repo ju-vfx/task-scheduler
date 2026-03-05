@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,7 +25,6 @@ func (srv *server) Start() {
 	log.Printf("Starting Scheduler Server on http://%s", addr)
 
 	registerHandlers(srv)
-	updateWorkerSlice(srv)
 
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
@@ -41,12 +39,6 @@ func registerHandlers(srv *server) {
 	http.HandleFunc("GET /api/jobs", srv.handlerGetJobs)
 	http.HandleFunc("POST /api/jobs", srv.handlerCreateJob)
 	http.HandleFunc("DELETE /api/jobs", srv.handlerDeleteJobs)
-}
 
-func updateWorkerSlice(srv *server) {
-	workers, err := srv.cfg.db.GetWorkers(context.Background())
-	if err != nil {
-		log.Fatal("Could not get workers")
-	}
-	srv.cfg.workers = workers
+	http.HandleFunc("POST /api/tasks", srv.handlerUpdateTasks)
 }
