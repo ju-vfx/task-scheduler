@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -62,18 +61,17 @@ func (srv *server) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = createTasks(srv, job.ID, uuid.NullUUID{}, requestData.Tasks, req)
+	err = createTasks(srv, job.ID, requestData.Tasks, req)
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't create Tasks")
 		return
 	}
 
 	tasks, _ := srv.cfg.db.GetTasks(req.Context())
-	fmt.Println("Number of tasks: ", len(tasks))
 	requests.RespondWithJSON(w, http.StatusOK, tasks)
 }
 
-func createTasks(srv *server, jobID uuid.UUID, parentTaskID uuid.NullUUID, tasks []taskParams, req *http.Request) error {
+func createTasks(srv *server, jobID uuid.UUID, tasks []taskParams, req *http.Request) error {
 
 	if len(tasks) == 0 || tasks == nil {
 		return nil

@@ -63,9 +63,11 @@ func (wrk *worker) handlerLaunchTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (wrk *worker) runTask(taskID uuid.UUID, taskCmd string) {
-	fmt.Println("Running task ", taskCmd)
+	log.Println("Running task", taskCmd)
 	time.Sleep(time.Second * 10) // simulate running command
+	// TODO: Implement actual command running with error detection
 
+	fmt.Println("	Finished task", taskCmd)
 	wrk.updateTaskStatus(taskID, utils.StatusFinished)
 }
 

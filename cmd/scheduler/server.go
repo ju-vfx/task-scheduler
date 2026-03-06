@@ -33,12 +33,14 @@ func registerHandlers(srv *server) {
 	// http.HandleFunc("GET /", s.handlerRoot)
 	http.HandleFunc("GET /api/workers", srv.handlerGetWorkers)
 	http.HandleFunc("POST /api/workers", srv.handlerRegisterWorker)
-	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
-		http.HandleFunc("DELETE /api/workers", srv.handlerDeleteWorkers)
-	}
+
 	http.HandleFunc("GET /api/jobs", srv.handlerGetJobs)
 	http.HandleFunc("POST /api/jobs", srv.handlerCreateJob)
-	http.HandleFunc("DELETE /api/jobs", srv.handlerDeleteJobs)
 
 	http.HandleFunc("POST /api/tasks", srv.handlerUpdateTasks)
+
+	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
+		http.HandleFunc("DELETE /api/workers", srv.handlerDeleteWorkers)
+		http.HandleFunc("DELETE /api/jobs", srv.handlerDeleteJobs)
+	}
 }
