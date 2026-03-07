@@ -30,8 +30,8 @@ func (srv *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
 		w := workerResp{
 			ID:          worker.ID.String(),
 			Host:        worker.Host,
-			ConnectedAt: worker.ConnectedAt.String(),
-			LastSeenAt:  worker.LastSeenAt.String(),
+			ConnectedAt: utils.TimeToString(worker.ConnectedAt),
+			LastSeenAt:  utils.TimeToString(worker.LastSeenAt),
 			Status:      utils.ObjectStatus(worker.Status).String(),
 		}
 

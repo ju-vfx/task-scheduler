@@ -20,6 +20,8 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 		TaskID     string `json:"task_id"`
 		TaskName   string `json:"task_name"`
 		TaskStatus string `json:"task_status"`
+		CreatedAt  string `json:"task_created_at"`
+		FinishedAt string `json:"task_finished_at"`
 	}
 	type respJob struct {
 		JobID         string     `json:"job_id"`
@@ -43,6 +45,8 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 				TaskID:     task.ID.String(),
 				TaskName:   task.Name,
 				TaskStatus: utils.ObjectStatus(task.Status).String(),
+				CreatedAt:  utils.TimeToString(task.CreatedAt),
+				FinishedAt: utils.TimeToString(task.FinishedAt.Time),
 			}
 
 			tasks = append(tasks, t)
@@ -52,8 +56,8 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 			JobName:       job.Name,
 			JobPriority:   int(job.Priority),
 			JobStatus:     utils.ObjectStatus(job.Status).String(),
-			JobCreatedAt:  job.CreatedAt.String(),
-			JobFinishedAt: job.FinishedAt.Time.String(),
+			JobCreatedAt:  utils.TimeToString(job.CreatedAt),
+			JobFinishedAt: utils.TimeToString(job.FinishedAt.Time),
 			JobTasks:      tasks,
 		}
 		data = append(data, j)

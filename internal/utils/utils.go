@@ -1,5 +1,9 @@
 package utils
 
+import (
+	"time"
+)
+
 type ObjectStatus int
 
 const (
@@ -25,4 +29,12 @@ func (e ObjectStatus) String() string {
 	default:
 		return "Undefined"
 	}
+}
+
+func TimeToString(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	layout := "15:04:05 02/01/2006"
+	return t.Format(layout)
 }

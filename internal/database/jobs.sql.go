@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -143,50 +144,25 @@ func (q *Queries) GetWaitingJobs(ctx context.Context) ([]Job, error) {
 	return items, nil
 }
 
-const updateJobError = `-- name: UpdateJobError :exec
+const updateJobStatus = `-- name: UpdateJobStatus :exec
 UPDATE jobs
-SET status = $2, cancelled_at = NOW()
+SET status = $2, finished_at = $3, cancelled_at = $4
 WHERE id = $1
 `
 
-type UpdateJobErrorParams struct {
-	ID     uuid.UUID
-	Status int32
+type UpdateJobStatusParams struct {
+	ID          uuid.UUID
+	Status      int32
+	FinishedAt  sql.NullTime
+	CancelledAt sql.NullTime
 }
 
-func (q *Queries) UpdateJobError(ctx context.Context, arg UpdateJobErrorParams) error {
-	_, err := q.db.ExecContext(ctx, updateJobError, arg.ID, arg.Status)
-	return err
-}
-
-const updateJobFinished = `-- name: UpdateJobFinished :exec
-UPDATE jobs
-SET status = $2, finished_at = NOW()
-WHERE id = $1
-`
-
-type UpdateJobFinishedParams struct {
-	ID     uuid.UUID
-	Status int32
-}
-
-func (q *Queries) UpdateJobFinished(ctx context.Context, arg UpdateJobFinishedParams) error {
-	_, err := q.db.ExecContext(ctx, updateJobFinished, arg.ID, arg.Status)
-	return err
-}
-
-const updateJobRunning = `-- name: UpdateJobRunning :exec
-UPDATE jobs
-SET status = $2
-WHERE id = $1
-`
-
-type UpdateJobRunningParams struct {
-	ID     uuid.UUID
-	Status int32
-}
-
-func (q *Queries) UpdateJobRunning(ctx context.Context, arg UpdateJobRunningParams) error {
-	_, err := q.db.ExecContext(ctx, updateJobRunning, arg.ID, arg.Status)
+func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateJobStatus,
+		arg.ID,
+		arg.Status,
+		arg.FinishedAt,
+		arg.CancelledAt,
+	)
 	return err
 }

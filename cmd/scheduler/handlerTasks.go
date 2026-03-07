@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ju-vfx/task-scheduler/internal/database"
@@ -31,7 +33,16 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update worker status")
 		return
 	}
-	_, err = srv.cfg.db.UpdateTaskStatus(req.Context(), database.UpdateTaskStatusParams{ID: uuid.MustParse(requestData.TaskID), Status: int32(status)})
+	taskStatusParms := database.UpdateTaskStatusParams{ID: uuid.MustParse(requestData.TaskID)}
+	switch status {
+	case utils.StatusFinished:
+		taskStatusParms.Status = int32(status)
+		taskStatusParms.FinishedAt = sql.NullTime{Time: time.Now(), Valid: true}
+	default:
+		taskStatusParms.Status = int32(status)
+		taskStatusParms.CancelledAt = sql.NullTime{Time: time.Now(), Valid: true}
+	}
+	_, err = srv.cfg.db.UpdateTaskStatus(req.Context(), taskStatusParms)
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update task status")
 		return

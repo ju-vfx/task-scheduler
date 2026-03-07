@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -157,38 +158,27 @@ func (sdl *scheduler) updateJobStatus(waitingJobs []job) {
 			}
 		}
 
-		fmt.Println("Running:", runningCount, "Waiting:", waitingCount, "Finished:", finishedCount, "Error:", errorCount)
+		// fmt.Println("Running:", runningCount, "Waiting:", waitingCount, "Finished:", finishedCount, "Error:", errorCount)
+		updateParams := database.UpdateJobStatusParams{ID: job.job.ID}
 		if finishedCount == len(job.tasks) {
 			jobStatus = utils.StatusFinished
-			err := sdl.cfg.db.UpdateJobFinished(context.Background(), database.UpdateJobFinishedParams{ID: job.job.ID, Status: int32(jobStatus)})
-			if err != nil {
-				log.Println("Could not update Job status:", err)
-			}
-			continue
-		}
-		if runningCount > 0 && errorCount == 0 {
+			updateParams.Status = int32(jobStatus)
+			updateParams.FinishedAt = sql.NullTime{Time: time.Now(), Valid: true}
+		} else if runningCount > 0 && errorCount == 0 {
 			jobStatus = utils.StatusRunning
-			err := sdl.cfg.db.UpdateJobRunning(context.Background(), database.UpdateJobRunningParams{ID: job.job.ID, Status: int32(jobStatus)})
-			if err != nil {
-				log.Println("Could not update Job status:", err)
-			}
-			continue
-		}
-		if runningCount == 0 && errorCount == 0 {
+			updateParams.Status = int32(jobStatus)
+		} else if runningCount == 0 && errorCount == 0 {
 			jobStatus = utils.StatusWaiting
-			err := sdl.cfg.db.UpdateJobRunning(context.Background(), database.UpdateJobRunningParams{ID: job.job.ID, Status: int32(jobStatus)})
-			if err != nil {
-				log.Println("Could not update Job status:", err)
-			}
-			continue
-		}
-		if errorCount > 0 {
+			updateParams.Status = int32(jobStatus)
+		} else if errorCount > 0 {
 			jobStatus = utils.StatusError
-			err := sdl.cfg.db.UpdateJobError(context.Background(), database.UpdateJobErrorParams{ID: job.job.ID, Status: int32(jobStatus)})
-			if err != nil {
-				log.Println("Could not update Job status:", err)
-			}
-			continue
+			updateParams.Status = int32(jobStatus)
+			updateParams.CancelledAt = sql.NullTime{Time: time.Now(), Valid: true}
+		}
+
+		err := sdl.cfg.db.UpdateJobStatus(context.Background(), updateParams)
+		if err != nil {
+			log.Println("Could not update Job status:", err)
 		}
 	}
 

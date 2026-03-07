@@ -13,7 +13,7 @@ ORDER BY created_at ASC;
 
 -- name: UpdateTaskStatus :one
 UPDATE tasks
-SET status = $2
+SET status = $2, finished_at = $3, cancelled_at = $4
 WHERE id = $1
 RETURNING *;
 

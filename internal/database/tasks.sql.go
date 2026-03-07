@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -146,18 +147,25 @@ func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task,
 
 const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
-SET status = $2
+SET status = $2, finished_at = $3, cancelled_at = $4
 WHERE id = $1
 RETURNING id, name, status, command, created_at, finished_at, cancelled_at, job_id
 `
 
 type UpdateTaskStatusParams struct {
-	ID     uuid.UUID
-	Status int32
+	ID          uuid.UUID
+	Status      int32
+	FinishedAt  sql.NullTime
+	CancelledAt sql.NullTime
 }
 
 func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
-	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.ID, arg.Status)
+	row := q.db.QueryRowContext(ctx, updateTaskStatus,
+		arg.ID,
+		arg.Status,
+		arg.FinishedAt,
+		arg.CancelledAt,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,

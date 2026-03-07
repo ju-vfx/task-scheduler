@@ -58,6 +58,8 @@ const JobList = () => {
                       <tr>
                         <th scope="col">Task</th>
                         <th scope="col">Status</th>
+                        <th scope="col">Created At</th>
+                        <th scope="col">Finished At</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -65,6 +67,8 @@ const JobList = () => {
                         <tr>
                           <td>{taskItem.task_name}</td>
                           <td>{taskItem.task_status}</td>
+                          <td>{taskItem.task_created_at}</td>
+                          <td>{taskItem.task_finished_at}</td>
                         </tr>
                       ))}
                     </tbody>
