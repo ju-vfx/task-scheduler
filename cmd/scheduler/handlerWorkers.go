@@ -16,12 +16,28 @@ func (srv *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Error loading workers")
 		return
 	}
-	type respData struct {
-		Workers []database.Worker `json:"workers"`
+	type workerResp struct {
+		ID          string `json:"id"`
+		Host        string `json:"host"`
+		ConnectedAt string `json:"connected_at"`
+		LastSeenAt  string `json:"last_seen_at"`
+		Status      string `json:"status"`
 	}
-	requests.RespondWithJSON(w, http.StatusOK, respData{
-		Workers: workers,
-	})
+
+	data := make([]workerResp, 0)
+
+	for _, worker := range workers {
+		w := workerResp{
+			ID:          worker.ID.String(),
+			Host:        worker.Host,
+			ConnectedAt: worker.ConnectedAt.String(),
+			LastSeenAt:  worker.LastSeenAt.String(),
+			Status:      utils.ObjectStatus(worker.Status).String(),
+		}
+
+		data = append(data, w)
+	}
+	requests.RespondWithJSON(w, http.StatusOK, data)
 }
 
 func (srv *server) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {

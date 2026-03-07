@@ -10,17 +10,49 @@ import (
 )
 
 func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
-	jobs, err := srv.cfg.db.GetJobs(req.Context())
+	dbJobs, err := srv.cfg.db.GetJobs(req.Context())
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't load Jobs from DB")
 		return
 	}
 
-	type respData struct {
-		Jobs []database.Job `json:"jobs"`
+	type respTask struct {
+		TaskID     string `json:"task_id"`
+		TaskName   string `json:"task_name"`
+		TaskStatus string `json:"task_status"`
 	}
-	data := respData{
-		Jobs: jobs,
+	type respJob struct {
+		JobID       string     `json:"job_id"`
+		JobName     string     `json:"job_name"`
+		JobPriority int        `json:"job_priority"`
+		JobStatus   string     `json:"job_status"`
+		JobTasks    []respTask `json:"job_tasks"`
+	}
+	data := make([]respJob, 0)
+	for _, job := range dbJobs {
+		dbTasks, err := srv.cfg.db.GetTasksByJobId(req.Context(), job.ID)
+		if err != nil {
+			requests.RespondWithError(w, http.StatusInternalServerError, "Can't load Tasks from DB")
+			return
+		}
+		tasks := make([]respTask, 0)
+		for _, task := range dbTasks {
+			t := respTask{
+				TaskID:     task.ID.String(),
+				TaskName:   task.Name,
+				TaskStatus: utils.ObjectStatus(task.Status).String(),
+			}
+
+			tasks = append(tasks, t)
+		}
+		j := respJob{
+			JobID:       job.ID.String(),
+			JobName:     job.Name,
+			JobPriority: int(job.Priority),
+			JobStatus:   utils.ObjectStatus(job.Status).String(),
+			JobTasks:    tasks,
+		}
+		data = append(data, j)
 	}
 	requests.RespondWithJSON(w, http.StatusOK, data)
 }
