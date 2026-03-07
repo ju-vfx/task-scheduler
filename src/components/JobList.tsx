@@ -3,6 +3,8 @@ import { useEffect } from "react";
 
 const JobList = () => {
   const [displayItems, setDisplayItems] = useState([]);
+  const [selectedJob, setSelectedJob] = useState("");
+
   const apiUrl = "http://localhost:8080/api/";
 
   const fetchJobs = async () => {
@@ -13,32 +15,67 @@ const JobList = () => {
 
   useEffect(() => {
     fetchJobs();
+    const interval = setInterval(() => {
+      fetchJobs();
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="list-group">
-      {displayItems.map((jobItem) => (
-        <div key={jobItem.job_id}>
-          <button
-            type="button"
-            className="list-group-item list-group-item-action list-group-item-primary"
-          >
-            {jobItem.job_name} {jobItem.job_priority} {jobItem.job_status}
-          </button>
-          <div className="list-group">
-            {jobItem.job_tasks.map((taskItem) => (
-              <a
-                href="#"
-                className="list-group-item list-group-item-action list-group-item-secondary"
-                key={taskItem.task_id}
-              >
-                {taskItem.task_name} {taskItem.task_status}
-              </a>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+    <table className="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Priority</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created At</th>
+          <th scope="col">Finished At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {displayItems.map((jobItem) => (
+          <>
+            <tr
+              key={jobItem.job_id}
+              role="button"
+              onClick={() => {
+                setSelectedJob(jobItem.job_id);
+              }}
+              className={selectedJob === jobItem.job_id ? "table-primary" : ""}
+            >
+              <td>{jobItem.job_name}</td>
+              <td>{jobItem.job_priority}</td>
+              <td>{jobItem.job_status}</td>
+              <td>{jobItem.job_created_at}</td>
+              <td>{jobItem.job_finished_at}</td>
+            </tr>
+            {jobItem.job_tasks.length > 0 && selectedJob === jobItem.job_id && (
+              <tr>
+                <td colSpan="5">
+                  <table className="table table-sm">
+                    <thead>
+                      <tr>
+                        <th scope="col">Task</th>
+                        <th scope="col">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobItem.job_tasks.map((taskItem) => (
+                        <tr>
+                          <td>{taskItem.task_name}</td>
+                          <td>{taskItem.task_status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            )}
+          </>
+        ))}
+      </tbody>
+    </table>
   );
 };
 

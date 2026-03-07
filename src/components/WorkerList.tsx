@@ -13,12 +13,17 @@ const WorkerList = () => {
 
   useEffect(() => {
     fetchWorkers();
+    const interval = setInterval(() => {
+      fetchWorkers();
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <table className="table">
       <thead>
-        <tr>
+        <tr href="#">
           <th scope="col">Host</th>
           <th scope="col">Status</th>
           <th scope="col">Last Seen</th>

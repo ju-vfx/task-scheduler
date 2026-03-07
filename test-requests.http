@@ -25,6 +25,7 @@ Content-Type: application/json
 
 {
     "name": "jobname",
+    "priority": 100,
     "tasks": [
         {
         "name": "taskname1",
@@ -33,6 +34,33 @@ Content-Type: application/json
         {
         "name": "taskname2",
         "command": "testcommand2"
+        } 
+    ]
+}
+
+### Create job 
+POST http://localhost:8080/api/jobs
+Content-Type: application/json
+
+{
+    "name": "jobname2",
+    "priority": 200,
+    "tasks": [
+        {
+        "name": "taskname1",
+        "command": "testcommand1"
+        },
+        {
+        "name": "taskname2",
+        "command": "testcommand2"
+        },
+        {
+        "name": "taskname3",
+        "command": "testcommand3"
+        },
+        {
+        "name": "taskname4",
+        "command": "testcommand4"
         } 
     ]
 }

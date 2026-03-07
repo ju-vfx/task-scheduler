@@ -22,11 +22,13 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 		TaskStatus string `json:"task_status"`
 	}
 	type respJob struct {
-		JobID       string     `json:"job_id"`
-		JobName     string     `json:"job_name"`
-		JobPriority int        `json:"job_priority"`
-		JobStatus   string     `json:"job_status"`
-		JobTasks    []respTask `json:"job_tasks"`
+		JobID         string     `json:"job_id"`
+		JobName       string     `json:"job_name"`
+		JobPriority   int        `json:"job_priority"`
+		JobStatus     string     `json:"job_status"`
+		JobCreatedAt  string     `json:"job_created_at"`
+		JobFinishedAt string     `json:"job_finished_at"`
+		JobTasks      []respTask `json:"job_tasks"`
 	}
 	data := make([]respJob, 0)
 	for _, job := range dbJobs {
@@ -46,11 +48,13 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 			tasks = append(tasks, t)
 		}
 		j := respJob{
-			JobID:       job.ID.String(),
-			JobName:     job.Name,
-			JobPriority: int(job.Priority),
-			JobStatus:   utils.ObjectStatus(job.Status).String(),
-			JobTasks:    tasks,
+			JobID:         job.ID.String(),
+			JobName:       job.Name,
+			JobPriority:   int(job.Priority),
+			JobStatus:     utils.ObjectStatus(job.Status).String(),
+			JobCreatedAt:  job.CreatedAt.String(),
+			JobFinishedAt: job.FinishedAt.Time.String(),
+			JobTasks:      tasks,
 		}
 		data = append(data, j)
 	}
