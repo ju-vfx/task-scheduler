@@ -71,6 +71,7 @@ func (q *Queries) GetTask(ctx context.Context, id uuid.UUID) (Task, error) {
 
 const getTasks = `-- name: GetTasks :many
 SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+ORDER BY created_at ASC
 `
 
 func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
@@ -108,6 +109,7 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 const getTasksByJobId = `-- name: GetTasksByJobId :many
 SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
 WHERE job_id = $1
+ORDER BY created_at ASC
 `
 
 func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task, error) {
@@ -142,10 +144,11 @@ func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task,
 	return items, nil
 }
 
-const updateTaskStatus = `-- name: UpdateTaskStatus :exec
+const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
 SET status = $2
 WHERE id = $1
+RETURNING id, name, status, command, created_at, finished_at, cancelled_at, job_id
 `
 
 type UpdateTaskStatusParams struct {
@@ -153,7 +156,18 @@ type UpdateTaskStatusParams struct {
 	Status int32
 }
 
-func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateTaskStatus, arg.ID, arg.Status)
-	return err
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.ID, arg.Status)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.Command,
+		&i.CreatedAt,
+		&i.FinishedAt,
+		&i.CancelledAt,
+		&i.JobID,
+	)
+	return i, err
 }

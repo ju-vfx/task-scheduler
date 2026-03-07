@@ -31,7 +31,7 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update worker status")
 		return
 	}
-	err = srv.cfg.db.UpdateTaskStatus(req.Context(), database.UpdateTaskStatusParams{ID: uuid.MustParse(requestData.TaskID), Status: int32(status)})
+	_, err = srv.cfg.db.UpdateTaskStatus(req.Context(), database.UpdateTaskStatusParams{ID: uuid.MustParse(requestData.TaskID), Status: int32(status)})
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update task status")
 		return

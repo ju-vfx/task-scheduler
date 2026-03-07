@@ -33,6 +33,8 @@ func scheduleLoop(sdl *scheduler, refreshInterval time.Duration) {
 		if len(waitingJobs) < 1 {
 			continue
 		}
+		sdl.updateJobStatus(waitingJobs)
+
 		availableWorkers := getAvailableWorkers(sdl)
 		if len(availableWorkers) < 1 {
 			continue
@@ -87,6 +89,7 @@ func distributeTasks(sdl *scheduler, waitingJobs []job, availableWorkers []datab
 					waitingJobs[jobIdx].tasks[taskIdx].Status = int32(utils.StatusRunning)
 					err := sdl.sendTaskToWorker(task, worker)
 					if err != nil {
+						fmt.Println("Error sending job to worker:", err)
 						break jobLoop
 					}
 					log.Printf("Sending task %s to worker %s\n", task.Name, worker.Host)
@@ -94,7 +97,7 @@ func distributeTasks(sdl *scheduler, waitingJobs []job, availableWorkers []datab
 					if err != nil {
 						fmt.Println(err)
 					}
-					err = sdl.cfg.db.UpdateTaskStatus(context.Background(), database.UpdateTaskStatusParams{ID: task.ID, Status: int32(utils.StatusRunning)})
+					_, err = sdl.cfg.db.UpdateTaskStatus(context.Background(), database.UpdateTaskStatusParams{ID: task.ID, Status: int32(utils.StatusRunning)})
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -128,4 +131,65 @@ func (sdl *scheduler) sendTaskToWorker(task database.Task, worker database.Worke
 	}
 
 	return nil
+}
+
+func (sdl *scheduler) updateJobStatus(waitingJobs []job) {
+	for _, job := range waitingJobs {
+
+		jobStatus := utils.ObjectStatus(job.job.Status)
+		finishedCount := 0
+		runningCount := 0
+		waitingCount := 0
+		errorCount := 0
+
+		for _, task := range job.tasks {
+			switch utils.ObjectStatus(task.Status) {
+			case utils.StatusRunning:
+				runningCount++
+			case utils.StatusWaiting:
+				waitingCount++
+			case utils.StatusFinished:
+				finishedCount++
+			case utils.StatusError:
+				errorCount++
+			default:
+				errorCount++
+			}
+		}
+
+		fmt.Println("Running:", runningCount, "Waiting:", waitingCount, "Finished:", finishedCount, "Error:", errorCount)
+		if finishedCount == len(job.tasks) {
+			jobStatus = utils.StatusFinished
+			err := sdl.cfg.db.UpdateJobFinished(context.Background(), database.UpdateJobFinishedParams{ID: job.job.ID, Status: int32(jobStatus)})
+			if err != nil {
+				log.Println("Could not update Job status:", err)
+			}
+			continue
+		}
+		if runningCount > 0 && errorCount == 0 {
+			jobStatus = utils.StatusRunning
+			err := sdl.cfg.db.UpdateJobRunning(context.Background(), database.UpdateJobRunningParams{ID: job.job.ID, Status: int32(jobStatus)})
+			if err != nil {
+				log.Println("Could not update Job status:", err)
+			}
+			continue
+		}
+		if runningCount == 0 && errorCount == 0 {
+			jobStatus = utils.StatusWaiting
+			err := sdl.cfg.db.UpdateJobRunning(context.Background(), database.UpdateJobRunningParams{ID: job.job.ID, Status: int32(jobStatus)})
+			if err != nil {
+				log.Println("Could not update Job status:", err)
+			}
+			continue
+		}
+		if errorCount > 0 {
+			jobStatus = utils.StatusError
+			err := sdl.cfg.db.UpdateJobError(context.Background(), database.UpdateJobErrorParams{ID: job.job.ID, Status: int32(jobStatus)})
+			if err != nil {
+				log.Println("Could not update Job status:", err)
+			}
+			continue
+		}
+	}
+
 }

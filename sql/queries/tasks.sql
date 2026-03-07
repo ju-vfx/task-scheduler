@@ -3,16 +3,19 @@ SELECT * FROM tasks
 WHERE id = $1;
 
 -- name: GetTasks :many
-SELECT * FROM tasks;
+SELECT * FROM tasks
+ORDER BY created_at ASC;
 
 -- name: GetTasksByJobId :many
 SELECT * FROM tasks
-WHERE job_id = $1;
+WHERE job_id = $1
+ORDER BY created_at ASC;
 
--- name: UpdateTaskStatus :exec
+-- name: UpdateTaskStatus :one
 UPDATE tasks
 SET status = $2
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: CreateTask :one
 INSERT INTO tasks (
