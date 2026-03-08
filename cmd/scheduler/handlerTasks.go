@@ -16,6 +16,7 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 		ID     string `json:"id"`
 		TaskID string `json:"task_id"`
 		Status int32  `json:"status"`
+		Output string `json:"output"`
 	}
 
 	requestData, err := requests.DecodeRequest(req, updateTaskParams{})
@@ -23,12 +24,10 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 		requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
 		return
 	}
+
 	status := utils.ObjectStatus(requestData.Status)
-	workerStatus := status
-	if status != utils.StatusError {
-		workerStatus = utils.StatusWaiting
-	}
-	err = srv.cfg.db.UpdateWorkerStatus(req.Context(), database.UpdateWorkerStatusParams{ID: uuid.MustParse(requestData.ID), Status: int32(workerStatus)})
+
+	err = srv.cfg.db.UpdateWorkerStatus(req.Context(), database.UpdateWorkerStatusParams{ID: uuid.MustParse(requestData.ID), Status: int32(utils.StatusWaiting)})
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update worker status")
 		return
@@ -38,9 +37,11 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 	case utils.StatusFinished:
 		taskStatusParms.Status = int32(status)
 		taskStatusParms.FinishedAt = sql.NullTime{Time: time.Now(), Valid: true}
+		taskStatusParms.Stdout = sql.NullString{String: requestData.Output, Valid: true}
 	default:
 		taskStatusParms.Status = int32(status)
 		taskStatusParms.CancelledAt = sql.NullTime{Time: time.Now(), Valid: true}
+		taskStatusParms.Stderr = sql.NullString{String: requestData.Output, Valid: true}
 	}
 	_, err = srv.cfg.db.UpdateTaskStatus(req.Context(), taskStatusParms)
 	if err != nil {

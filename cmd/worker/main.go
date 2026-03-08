@@ -7,7 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
+	"os/exec"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -63,25 +64,47 @@ func (wrk *worker) handlerLaunchTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (wrk *worker) runTask(taskID uuid.UUID, taskCmd string) {
-	log.Println("Running task", taskCmd)
-	time.Sleep(time.Second * 10) // simulate running command
-	// TODO: Implement actual command running with error detection
+	cmdSlice := strings.Fields(taskCmd)
 
-	fmt.Println("	Finished task", taskCmd)
-	wrk.updateTaskStatus(taskID, utils.StatusFinished)
+	var cmd *exec.Cmd
+
+	if len(cmdSlice) < 2 {
+		cmd = exec.Command(cmdSlice[0])
+	} else {
+		cmd = exec.Command(cmdSlice[0], cmdSlice[1:]...)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Println("Running task", taskCmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error:", err)
+		fmt.Println("Stderr:", stderr.String())
+		wrk.updateTaskStatus(taskID, utils.StatusError, stderr)
+		return
+	}
+
+	fmt.Println("Finished task", taskCmd)
+	wrk.updateTaskStatus(taskID, utils.StatusFinished, stdout)
 }
 
-func (wrk *worker) updateTaskStatus(taskId uuid.UUID, status utils.ObjectStatus) {
+func (wrk *worker) updateTaskStatus(taskId uuid.UUID, status utils.ObjectStatus, output bytes.Buffer) {
 	type loginParams struct {
 		ID     string `json:"id"`
 		TaskID string `json:"task_id"`
 		Status int32  `json:"status"`
+		Output string `json:"output"`
 	}
 
 	data, _ := json.Marshal(loginParams{
 		ID:     wrk.id.String(),
 		TaskID: taskId.String(),
 		Status: int32(status),
+		Output: output.String(),
 	})
 
 	_, err := http.Post(fmt.Sprintf("http://%s:%s/api/tasks", wrk.srvHost, wrk.srvPort), "application/json", bytes.NewReader(data))

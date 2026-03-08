@@ -18,7 +18,7 @@ INSERT INTO tasks (
 ) VALUES (
     gen_random_uuid(), $1, $2, $3, NOW(), $4
 )
-RETURNING id, name, status, command, created_at, finished_at, cancelled_at, job_id
+RETURNING id, name, status, command, created_at, finished_at, cancelled_at, stdout, stderr, job_id
 `
 
 type CreateTaskParams struct {
@@ -44,13 +44,15 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.CreatedAt,
 		&i.FinishedAt,
 		&i.CancelledAt,
+		&i.Stdout,
+		&i.Stderr,
 		&i.JobID,
 	)
 	return i, err
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, stdout, stderr, job_id FROM tasks
 WHERE id = $1
 `
 
@@ -65,13 +67,15 @@ func (q *Queries) GetTask(ctx context.Context, id uuid.UUID) (Task, error) {
 		&i.CreatedAt,
 		&i.FinishedAt,
 		&i.CancelledAt,
+		&i.Stdout,
+		&i.Stderr,
 		&i.JobID,
 	)
 	return i, err
 }
 
 const getTasks = `-- name: GetTasks :many
-SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, stdout, stderr, job_id FROM tasks
 ORDER BY created_at ASC
 `
 
@@ -92,6 +96,8 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 			&i.CreatedAt,
 			&i.FinishedAt,
 			&i.CancelledAt,
+			&i.Stdout,
+			&i.Stderr,
 			&i.JobID,
 		); err != nil {
 			return nil, err
@@ -108,7 +114,7 @@ func (q *Queries) GetTasks(ctx context.Context) ([]Task, error) {
 }
 
 const getTasksByJobId = `-- name: GetTasksByJobId :many
-SELECT id, name, status, command, created_at, finished_at, cancelled_at, job_id FROM tasks
+SELECT id, name, status, command, created_at, finished_at, cancelled_at, stdout, stderr, job_id FROM tasks
 WHERE job_id = $1
 ORDER BY created_at ASC
 `
@@ -130,6 +136,8 @@ func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task,
 			&i.CreatedAt,
 			&i.FinishedAt,
 			&i.CancelledAt,
+			&i.Stdout,
+			&i.Stderr,
 			&i.JobID,
 		); err != nil {
 			return nil, err
@@ -147,9 +155,9 @@ func (q *Queries) GetTasksByJobId(ctx context.Context, jobID uuid.UUID) ([]Task,
 
 const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
-SET status = $2, finished_at = $3, cancelled_at = $4
+SET status = $2, finished_at = $3, cancelled_at = $4, stdout = $5, stderr = $6
 WHERE id = $1
-RETURNING id, name, status, command, created_at, finished_at, cancelled_at, job_id
+RETURNING id, name, status, command, created_at, finished_at, cancelled_at, stdout, stderr, job_id
 `
 
 type UpdateTaskStatusParams struct {
@@ -157,6 +165,8 @@ type UpdateTaskStatusParams struct {
 	Status      int32
 	FinishedAt  sql.NullTime
 	CancelledAt sql.NullTime
+	Stdout      sql.NullString
+	Stderr      sql.NullString
 }
 
 func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
@@ -165,6 +175,8 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		arg.Status,
 		arg.FinishedAt,
 		arg.CancelledAt,
+		arg.Stdout,
+		arg.Stderr,
 	)
 	var i Task
 	err := row.Scan(
@@ -175,6 +187,8 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.CreatedAt,
 		&i.FinishedAt,
 		&i.CancelledAt,
+		&i.Stdout,
+		&i.Stderr,
 		&i.JobID,
 	)
 	return i, err

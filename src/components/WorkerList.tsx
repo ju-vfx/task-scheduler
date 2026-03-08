@@ -6,9 +6,14 @@ const WorkerList = () => {
   const apiUrl = "http://localhost:8080/api/";
 
   const fetchWorkers = async () => {
-    const response = await fetch(apiUrl + "workers");
-    const data = await response.json();
-    setDisplayItems(data);
+    try {
+      const response = await fetch(apiUrl + "workers");
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+      }
+      const data = await response.json();
+      setDisplayItems(data);
+    } catch (error) {}
   };
 
   useEffect(() => {

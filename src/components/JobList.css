@@ -1,0 +1,5 @@
+.terminal-output {
+    white-space: pre-line;
+    color: white !important;
+    background-color: rgb(28, 28, 28) !important;
+}

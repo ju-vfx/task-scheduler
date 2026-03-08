@@ -29,6 +29,8 @@ type Task struct {
 	CreatedAt   time.Time
 	FinishedAt  sql.NullTime
 	CancelledAt sql.NullTime
+	Stdout      sql.NullString
+	Stderr      sql.NullString
 	JobID       uuid.UUID
 }
 

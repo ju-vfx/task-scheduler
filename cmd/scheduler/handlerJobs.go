@@ -17,11 +17,13 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 	}
 
 	type respTask struct {
-		TaskID     string `json:"task_id"`
-		TaskName   string `json:"task_name"`
-		TaskStatus string `json:"task_status"`
-		CreatedAt  string `json:"task_created_at"`
-		FinishedAt string `json:"task_finished_at"`
+		TaskID      string `json:"task_id"`
+		TaskName    string `json:"task_name"`
+		TaskStatus  string `json:"task_status"`
+		TaskCommand string `json:"task_command"`
+		CreatedAt   string `json:"task_created_at"`
+		FinishedAt  string `json:"task_finished_at"`
+		Output      string `json:"task_output"`
 	}
 	type respJob struct {
 		JobID         string     `json:"job_id"`
@@ -41,12 +43,20 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 		}
 		tasks := make([]respTask, 0)
 		for _, task := range dbTasks {
+			output := ""
+			if task.Stdout.Valid {
+				output = task.Stdout.String
+			} else if task.Stderr.Valid {
+				output = task.Stderr.String
+			}
 			t := respTask{
-				TaskID:     task.ID.String(),
-				TaskName:   task.Name,
-				TaskStatus: utils.ObjectStatus(task.Status).String(),
-				CreatedAt:  utils.TimeToString(task.CreatedAt),
-				FinishedAt: utils.TimeToString(task.FinishedAt.Time),
+				TaskID:      task.ID.String(),
+				TaskName:    task.Name,
+				TaskStatus:  utils.ObjectStatus(task.Status).String(),
+				TaskCommand: task.Command,
+				CreatedAt:   utils.TimeToString(task.CreatedAt),
+				FinishedAt:  utils.TimeToString(task.FinishedAt.Time),
+				Output:      output,
 			}
 
 			tasks = append(tasks, t)

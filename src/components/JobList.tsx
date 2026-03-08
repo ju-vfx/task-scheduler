@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { useEffect } from "react";
+import "./JobList.css";
 
 const JobList = () => {
   const [displayItems, setDisplayItems] = useState([]);
   const [selectedJob, setSelectedJob] = useState("");
+  const [selectedTask, setSelectedTask] = useState("");
 
   const apiUrl = "http://localhost:8080/api/";
 
   const fetchJobs = async () => {
-    const response = await fetch(apiUrl + "jobs");
-    const data = await response.json();
-    setDisplayItems(data);
+    try {
+      const response = await fetch(apiUrl + "jobs");
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+      }
+      const data = await response.json();
+      setDisplayItems(data);
+    } catch (error) {}
   };
 
   useEffect(() => {
@@ -64,12 +71,40 @@ const JobList = () => {
                     </thead>
                     <tbody>
                       {jobItem.job_tasks.map((taskItem) => (
-                        <tr>
-                          <td>{taskItem.task_name}</td>
-                          <td>{taskItem.task_status}</td>
-                          <td>{taskItem.task_created_at}</td>
-                          <td>{taskItem.task_finished_at}</td>
-                        </tr>
+                        <>
+                          <tr
+                            role="button"
+                            onClick={() => {
+                              setSelectedTask(taskItem.task_id);
+                            }}
+                            className={
+                              selectedTask === taskItem.task_id
+                                ? "table-primary"
+                                : ""
+                            }
+                          >
+                            <td>{taskItem.task_name}</td>
+                            <td>{taskItem.task_status}</td>
+                            <td>{taskItem.task_created_at}</td>
+                            <td>{taskItem.task_finished_at}</td>
+                          </tr>
+                          {selectedTask === taskItem.task_id && (
+                            <>
+                              <tr>
+                                <td colSpan="5">
+                                  Command: "{taskItem.task_command}"
+                                </td>
+                              </tr>
+                              {taskItem.task_output != "" && (
+                                <tr>
+                                  <td className="terminal-output" colSpan="5">
+                                    {taskItem.task_output}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,6 +26,10 @@ func (srv *server) Start() {
 	log.Printf("Starting Scheduler Server on http://%s", addr)
 
 	registerHandlers(srv)
+	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
+		_ = srv.cfg.db.DeleteJobs(context.Background())
+		_ = srv.cfg.db.DeleteWorkers(context.Background())
+	}
 
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
