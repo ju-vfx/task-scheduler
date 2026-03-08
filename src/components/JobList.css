@@ -3,3 +3,11 @@
     color: white !important;
     background-color: rgb(28, 28, 28) !important;
 }
+
+.status-error {
+    color: red !important;
+}
+
+.status-finished {
+    color: green !important;
+}

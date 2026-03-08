@@ -73,6 +73,7 @@ func (q *Queries) GetJob(ctx context.Context, id uuid.UUID) (Job, error) {
 
 const getJobs = `-- name: GetJobs :many
 SELECT id, name, status, priority, created_at, finished_at, cancelled_at FROM jobs
+ORDER BY created_at DESC
 `
 
 func (q *Queries) GetJobs(ctx context.Context) ([]Job, error) {
@@ -110,7 +111,7 @@ const getWaitingJobs = `-- name: GetWaitingJobs :many
 SELECT id, name, status, priority, created_at, finished_at, cancelled_at FROM jobs
 WHERE finished_at IS NULL
 AND cancelled_at IS NULL
-ORDER BY priority, created_at DESC
+ORDER BY priority DESC, created_at ASC
 `
 
 func (q *Queries) GetWaitingJobs(ctx context.Context) ([]Job, error) {

@@ -3,13 +3,14 @@ SELECT * FROM jobs
 WHERE id = $1;
 
 -- name: GetJobs :many
-SELECT * FROM jobs;
+SELECT * FROM jobs
+ORDER BY created_at DESC;
 
 -- name: GetWaitingJobs :many
 SELECT * FROM jobs
 WHERE finished_at IS NULL
 AND cancelled_at IS NULL
-ORDER BY priority, created_at DESC;
+ORDER BY priority DESC, created_at ASC;
 
 -- name: UpdateJobStatus :exec
 UPDATE jobs
