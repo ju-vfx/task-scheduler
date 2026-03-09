@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -113,19 +115,20 @@ func (wrk *worker) connectToWs(addr string) (*websocket.Conn, error) {
 
 func (wrk *worker) handleTaskMessage(payload map[string]string) {
 
-	id := uuid.MustParse(payload["task_id"])
+	jobID := uuid.MustParse(payload["job_id"])
+	taskID := uuid.MustParse(payload["task_id"])
 	cmd := payload["command"]
 
-	err := wrk.sendStatusMessage(utils.StatusRunning, id, nil)
+	err := wrk.sendStatusMessage(utils.StatusRunning, jobID, taskID, nil)
 	if err != nil {
 		log.Println("Could not send status update. Aborting task launch.")
 		return
 	}
-	go wrk.runTask(id, cmd)
+	go wrk.runTask(jobID, taskID, cmd)
 
 }
 
-func (wrk *worker) sendStatusMessage(status utils.ObjectStatus, task_id uuid.UUID, output *string) error {
+func (wrk *worker) sendStatusMessage(status utils.ObjectStatus, jobID, taskID uuid.UUID, output *string) error {
 	type statusMessage struct {
 		Type    int               `json:"message_type"`
 		Payload map[string]string `json:"payload"`
@@ -137,7 +140,8 @@ func (wrk *worker) sendStatusMessage(status utils.ObjectStatus, task_id uuid.UUI
 	}
 
 	payload.Payload["status"] = strconv.Itoa(int(status))
-	payload.Payload["task_id"] = task_id.String()
+	payload.Payload["job_id"] = jobID.String()
+	payload.Payload["task_id"] = taskID.String()
 	if output != nil {
 		payload.Payload["output"] = *output
 	}
@@ -151,37 +155,36 @@ func (wrk *worker) sendStatusMessage(status utils.ObjectStatus, task_id uuid.UUI
 	return nil
 }
 
-func (wrk *worker) runTask(taskID uuid.UUID, taskCmd string) {
+func (wrk *worker) runTask(jobID, taskID uuid.UUID, taskCmd string) {
 
-	log.Println("Running", taskCmd)
-	time.Sleep(time.Second * 5)
-	output := "This is a test output"
-	wrk.sendStatusMessage(utils.StatusFinished, taskID, &output)
+	cmdSlice := strings.Fields(taskCmd)
 
-	// cmdSlice := strings.Fields(taskCmd)
+	var cmd *exec.Cmd
 
-	// var cmd *exec.Cmd
+	if len(cmdSlice) < 2 {
+		cmd = exec.Command(cmdSlice[0])
+	} else {
+		cmd = exec.Command(cmdSlice[0], cmdSlice[1:]...)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	// if len(cmdSlice) < 2 {
-	// 	cmd = exec.Command(cmdSlice[0])
-	// } else {
-	// 	cmd = exec.Command(cmdSlice[0], cmdSlice[1:]...)
-	// }
-	// var stdout bytes.Buffer
-	// var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
-	// cmd.Stdout = &stdout
-	// cmd.Stderr = &stderr
+	var output string
 
-	// log.Println("Running task", taskCmd)
-	// err := cmd.Run()
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	fmt.Println("Stderr:", stderr.String())
-	// 	// wrk.updateTaskStatus(taskID, utils.StatusError, stderr)
-	// 	return
-	// }
+	log.Println("Running task", taskCmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error:", err)
+		fmt.Println("Stderr:", stderr.String())
+		output = stderr.String()
+		wrk.sendStatusMessage(utils.StatusError, jobID, taskID, &output)
+		return
+	}
 
-	// fmt.Println("Finished task", taskCmd)
-	// // wrk.updateTaskStatus(taskID, utils.StatusFinished, stdout)
+	fmt.Println("Finished task", taskCmd)
+	output = stdout.String()
+	wrk.sendStatusMessage(utils.StatusFinished, jobID, taskID, &output)
 }

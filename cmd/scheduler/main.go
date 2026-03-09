@@ -19,6 +19,7 @@ type appConfig struct {
 	db      *database.Queries
 	workers []*worker
 	jobs    []*job
+	clients []*client
 }
 
 func main() {
@@ -37,6 +38,7 @@ func main() {
 		db:      db,
 		workers: make([]*worker, 0),
 		jobs:    make([]*job, 0),
+		clients: make([]*client, 0),
 	}
 
 	conf.startServer()
@@ -81,13 +83,10 @@ func (conf *appConfig) startServer() {
 }
 
 func (conf *appConfig) registerHandlers() {
-	http.HandleFunc("GET /api/workers", conf.handlerGetWorkers)
 	http.HandleFunc("/api/registerWorkers", conf.handlerRegisterWorker)
+	http.HandleFunc("/api/registerClients", conf.handlerRegisterClients)
 
-	http.HandleFunc("GET /api/jobs", conf.handlerGetJobs)
 	http.HandleFunc("POST /api/jobs", conf.handlerCreateJob)
-
-	http.HandleFunc("POST /api/tasks", conf.handlerUpdateTasks)
 
 	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
 		http.HandleFunc("DELETE /api/jobs", conf.handlerDeleteJobs)

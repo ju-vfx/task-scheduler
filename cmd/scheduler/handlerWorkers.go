@@ -58,7 +58,7 @@ func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Re
 	}
 	conf.workers = append(conf.workers, wrk)
 
-	conf.UpdateState()
+	conf.ScheduleTasks()
 	go wrk.ReadWorkerWebsocketMessage()
 
 }
@@ -67,5 +67,6 @@ func (conf *appConfig) deleteWorker(w *worker) {
 	conf.mu.Lock()
 	conf.workers = slices.DeleteFunc(conf.workers, func(worker *worker) bool { return worker.id == w.id })
 	conf.mu.Unlock()
-	conf.UpdateState()
+	conf.broadcastWorkers()
+	conf.ScheduleTasks()
 }

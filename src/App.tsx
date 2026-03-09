@@ -5,6 +5,40 @@ import WorkerList from "./components/WorkerList";
 
 function App() {
   const [selection, setSelection] = useState("Jobs");
+  const [isConnected, setIsConnected] = useState(false);
+  const [workers, setWorkers] = useState([]);
+  const [jobs, setJobs] = useState([]);
+
+  const connectToWebsocket = () => {
+    let socket = new WebSocket("ws://localhost:8080/api/registerClients");
+    console.log("Attempting websocket connection");
+    socket.onopen = () => {
+      console.log("Successful connection to server");
+      setIsConnected(true);
+    };
+
+    socket.onclose = (event) => {
+      console.log("Connection to server closed: ", event);
+      setIsConnected(false);
+    };
+
+    socket.onerror = (error) => {
+      console.log("Socket Error: ", error);
+      setIsConnected(false);
+    };
+
+    socket.onmessage = (msg) => {
+      let data = JSON.parse(msg.data);
+      if (data["message_type"] === "workers") {
+        setWorkers(data["payload"]);
+      }
+      if (data["message_type"] === "jobs") {
+        setJobs(data["payload"]);
+      }
+    };
+  };
+
+  connectToWebsocket();
 
   return (
     <>
@@ -13,7 +47,17 @@ function App() {
           setSelection(selItem);
         }}
       />
-      {selection === "Jobs" ? <JobList /> : <WorkerList />}
+      {selection === "Jobs" ? (
+        <JobList allJobs={jobs} />
+      ) : (
+        <WorkerList allWorkers={workers} />
+      )}
+      {isConnected === false && (
+        <>
+          <p>No connection to server</p>
+          <button onClick={connectToWebsocket}>Reconnect</button>
+        </>
+      )}
     </>
   );
 }

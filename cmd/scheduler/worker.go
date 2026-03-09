@@ -32,12 +32,13 @@ func (w *worker) SendWorkerWebsocketMessage(msg websocketMessage) {
 	w.conn.WriteMessage(msg.messageType, msg.message)
 }
 
-func (w *worker) sendTaskMessage(taskID uuid.UUID, command string) error {
+func (w *worker) sendTaskMessage(jobID, taskID uuid.UUID, command string) error {
 	payload := workerMessage{
 		Type:    int(utils.TaskMessage),
 		Payload: make(map[string]string, 0),
 	}
 
+	payload.Payload["job_id"] = jobID.String()
 	payload.Payload["task_id"] = taskID.String()
 	payload.Payload["command"] = command
 
@@ -85,6 +86,7 @@ func (w *worker) handleConnectMessage(payload map[string]string) {
 	w.host = payload["host"]
 	w.port = payload["port"]
 	log.Printf("Worker connected: %s:%s", w.host, w.port)
+	w.conf.broadcastWorkers()
 }
 
 func (w *worker) handleStatusMessage(payload map[string]string) {
@@ -99,17 +101,19 @@ func (w *worker) handleStatusMessage(payload map[string]string) {
 	switch taskStatus {
 	case utils.StatusRunning:
 		w.status = taskStatus
-		log.Println("Task running:", *w.task_id)
+		w.conf.updateTaskStatus(uuid.MustParse(payload["task_id"]), taskStatus, "")
 	case utils.StatusFinished:
 		w.status = utils.StatusWaiting
-		log.Println("Task finished:", *w.task_id)
 		w.task_id = nil
-		// payload["output"]
-		// payload["task_id"]
+		w.conf.updateTaskStatus(uuid.MustParse(payload["task_id"]), taskStatus, payload["output"])
 	case utils.StatusError:
 		w.status = utils.StatusWaiting
-		log.Println("Task error:", *w.task_id)
+		w.conf.updateTaskStatus(uuid.MustParse(payload["task_id"]), taskStatus, payload["output"])
 		w.task_id = nil
 	}
-	w.conf.UpdateState()
+
+	w.conf.updateJobStatus(uuid.MustParse(payload["job_id"]))
+	w.conf.broadcastWorkers()
+	w.conf.broadcastJobs()
+	w.conf.ScheduleTasks()
 }

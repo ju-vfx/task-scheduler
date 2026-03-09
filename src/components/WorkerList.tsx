@@ -1,30 +1,7 @@
-import { useState } from "react";
-import { useEffect } from "react";
-
-const WorkerList = () => {
-  const [displayItems, setDisplayItems] = useState([]);
-  const apiUrl = "http://localhost:8080/api/";
-
-  const fetchWorkers = async () => {
-    try {
-      const response = await fetch(apiUrl + "workers");
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-      const data = await response.json();
-      setDisplayItems(data);
-    } catch (error) {}
-  };
-
-  useEffect(() => {
-    fetchWorkers();
-    const interval = setInterval(() => {
-      fetchWorkers();
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
+const WorkerList = ({ allWorkers }) => {
+  if (allWorkers.length < 1) {
+    return <>No workers available</>;
+  }
   return (
     <table className="table">
       <thead>
@@ -36,7 +13,7 @@ const WorkerList = () => {
         </tr>
       </thead>
       <tbody>
-        {displayItems.map((workerItem) => (
+        {allWorkers.map((workerItem) => (
           <tr>
             <td>{workerItem.host}</td>
             <td>{workerItem.status}</td>
