@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -95,7 +96,9 @@ type jobParams struct {
 
 func (conf *appConfig) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
 
-	requestData, err := requests.DecodeRequest(req, jobParams{})
+	var buff bytes.Buffer
+	_ = req.Write(&buff)
+	requestData, err := requests.DecodeJSON(buff.Bytes(), jobParams{})
 	if err != nil {
 		requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
 		return

@@ -1,13 +1,12 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
-type wsMessage struct {
+type websocketMessage struct {
 	message     []byte
 	messageType int
 }
@@ -15,22 +14,6 @@ type wsMessage struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-}
-
-func (w *worker) SendWsMessage(msg wsMessage) {
-	w.conn.WriteMessage(msg.messageType, msg.message)
-}
-
-func (w *worker) ReadWsMessage() {
-	defer w.conn.Close()
-	for {
-		messageType, p, err := w.conn.ReadMessage()
-		if err != nil {
-			log.Println("Error reading message:", messageType, err)
-			return
-		}
-		log.Println(messageType, string(p))
-	}
 }
 
 func UpgradeConnection(w http.ResponseWriter, req *http.Request) (*websocket.Conn, error) {

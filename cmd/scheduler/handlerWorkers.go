@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"github.com/ju-vfx/task-scheduler/internal/requests"
 	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
@@ -39,16 +38,6 @@ func (conf *appConfig) handlerGetWorkers(w http.ResponseWriter, req *http.Reques
 
 func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
 
-	type workerParams struct {
-		Host string `json:"host"`
-		Port string `json:"port"`
-	}
-	// reqParams, err := requests.DecodeRequest(req, workerParams{})
-	// if err != nil {
-	// 	requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
-	// 	return
-	// }
-
 	ws, err := UpgradeConnection(w, req)
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Could not connect to websocket")
@@ -57,6 +46,7 @@ func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Re
 
 	id, _ := uuid.NewUUID()
 	wrk := &worker{
+		conf:        conf,
 		id:          id,
 		conn:        ws,
 		host:        "",
@@ -64,29 +54,18 @@ func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Re
 		connectedAt: time.Now(),
 		lastSeenAt:  time.Now(),
 		status:      utils.StatusWaiting,
-		task:        "",
+		task_id:     nil,
 	}
 	conf.workers = append(conf.workers, wrk)
 
-	wrkResp := workerResp{
-		ID:          wrk.id.String(),
-		Host:        wrk.host,
-		ConnectedAt: utils.TimeToString(wrk.connectedAt),
-		LastSeenAt:  utils.TimeToString(wrk.lastSeenAt),
-		Status:      utils.ObjectStatus(wrk.status).String(),
-	}
+	conf.UpdateState()
+	go wrk.ReadWorkerWebsocketMessage()
 
-	wrk.SendWsMessage(wsMessage{message: requests.EncodeJSON(wrkResp), messageType: websocket.BinaryMessage})
-
-	go wrk.ReadWsMessage()
-	fmt.Println(conf.workers)
 }
 
-func (conf *appConfig) handlerDeleteWorkers(w http.ResponseWriter, req *http.Request) {
-	err := conf.db.DeleteWorkers(req.Context())
-	if err != nil {
-		requests.RespondWithError(w, http.StatusBadRequest, "Error deleting workers")
-		return
-	}
-	requests.RespondWithJSON(w, http.StatusOK, "")
+func (conf *appConfig) deleteWorker(w *worker) {
+	conf.mu.Lock()
+	conf.workers = slices.DeleteFunc(conf.workers, func(worker *worker) bool { return worker.id == w.id })
+	conf.mu.Unlock()
+	conf.UpdateState()
 }

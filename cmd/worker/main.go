@@ -1,15 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"strings"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -19,11 +17,9 @@ import (
 )
 
 type worker struct {
-	id      uuid.UUID
-	host    string
-	port    string
-	srvHost string
-	srvPort string
+	id     uuid.UUID
+	conn   *websocket.Conn
+	status utils.ObjectStatus
 }
 
 func main() {
@@ -35,141 +31,157 @@ func main() {
 
 	wrk := worker{}
 
-	wrk.srvHost = os.Getenv("TS_HOST")
-	wrk.srvPort = os.Getenv("TS_PORT")
+	host := os.Getenv("TS_HOST")
+	port := os.Getenv("TS_PORT")
+	addr := fmt.Sprintf("%s:%s", host, port)
 
-	wrk.host = os.Getenv("TS_WORKER_HOST")
-	wrk.port = os.Getenv("TS_WORKER_PORT")
-	//addr := fmt.Sprintf("%s:%s", wrk.host, wrk.port)
-
-	//wrk.registerWithServer()
-	err = wrk.connectToWs()
+	ws, err := wrk.connectToWs(addr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	wrk.conn = ws
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 
-	//http.HandleFunc("POST /api/tasks", wrk.handlerLaunchTask)
+	wrk.sendConnectMessage()
+	go wrk.readWsMessages(&wg)
 
-	//log.Printf("Starting Worker on http://%s", addr)
-	//log.Fatal(http.ListenAndServe(addr, nil))
+	wg.Wait()
 }
 
-func (wrk *worker) connectToWs() error {
-	type loginParams struct {
-		Host string `json:"host"`
-		Port string `json:"port"`
+func (wrk *worker) sendConnectMessage() {
+	type connectMessage struct {
+		Type    int               `json:"message_type"`
+		Payload map[string]string `json:"payload"`
 	}
 
-	url := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/api/registerWorkers"}
-	conn, resp, err := websocket.DefaultDialer.Dial(url.String(), nil)
+	payload := connectMessage{
+		Type:    int(utils.ConnectMessage),
+		Payload: make(map[string]string, 0),
+	}
+
+	payload.Payload["host"] = "localhost"
+	payload.Payload["port"] = "941241"
+
+	message := requests.EncodeJSON(payload)
+
+	wrk.conn.WriteMessage(websocket.BinaryMessage, message)
+}
+
+func (wrk *worker) readWsMessages(wg *sync.WaitGroup) {
+	type serverMessage struct {
+		Type    int               `json:"message_type"`
+		Payload map[string]string `json:"payload"`
+	}
+
+	defer wrk.conn.Close()
+	defer wg.Done()
+	for {
+		_, msg, err := wrk.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure) {
+				log.Println("Unexpected connection close")
+				return
+			}
+			log.Println(err)
+		}
+
+		jsonMsg, err := requests.DecodeJSON(msg, serverMessage{})
+		if err != nil {
+			log.Println("Could not decode worker message")
+		}
+
+		switch jsonMsg.Type {
+		case int(utils.TaskMessage):
+			wrk.handleTaskMessage(jsonMsg.Payload)
+		default:
+			log.Println("Unknown Message type:", jsonMsg.Type)
+		}
+	}
+}
+
+func (wrk *worker) connectToWs(addr string) (*websocket.Conn, error) {
+
+	url := url.URL{Scheme: "ws", Host: addr, Path: "/api/registerWorkers"}
+	ws, resp, err := websocket.DefaultDialer.Dial(url.String(), nil)
 	if err != nil {
 		fmt.Println(resp.Status)
-		return err
+		return nil, err
 	}
-	defer conn.Close()
-
-	for {
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			return err
-		}
-		log.Println(string(msg))
-	}
+	return ws, nil
 }
 
-func (wrk *worker) handlerLaunchTask(w http.ResponseWriter, req *http.Request) {
-	type launchTaskReq struct {
-		ID      string `json:"id"`
-		Command string `json:"command"`
-	}
-	params, err := requests.DecodeRequest(req, launchTaskReq{})
+func (wrk *worker) handleTaskMessage(payload map[string]string) {
+
+	id := uuid.MustParse(payload["task_id"])
+	cmd := payload["command"]
+
+	err := wrk.sendStatusMessage(utils.StatusRunning, id, nil)
 	if err != nil {
-		requests.RespondWithError(w, http.StatusBadRequest, "Could not decode request")
+		log.Println("Could not send status update. Aborting task launch.")
 		return
 	}
+	go wrk.runTask(id, cmd)
 
-	requests.RespondWithJSON(w, http.StatusOK, params)
-	go wrk.runTask(uuid.MustParse(params.ID), params.Command)
+}
+
+func (wrk *worker) sendStatusMessage(status utils.ObjectStatus, task_id uuid.UUID, output *string) error {
+	type statusMessage struct {
+		Type    int               `json:"message_type"`
+		Payload map[string]string `json:"payload"`
+	}
+
+	payload := statusMessage{
+		Type:    int(utils.StatusMessage),
+		Payload: make(map[string]string, 0),
+	}
+
+	payload.Payload["status"] = strconv.Itoa(int(status))
+	payload.Payload["task_id"] = task_id.String()
+	if output != nil {
+		payload.Payload["output"] = *output
+	}
+
+	message := requests.EncodeJSON(payload)
+
+	err := wrk.conn.WriteMessage(websocket.BinaryMessage, message)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (wrk *worker) runTask(taskID uuid.UUID, taskCmd string) {
-	cmdSlice := strings.Fields(taskCmd)
 
-	var cmd *exec.Cmd
+	log.Println("Running", taskCmd)
+	time.Sleep(time.Second * 5)
+	output := "This is a test output"
+	wrk.sendStatusMessage(utils.StatusFinished, taskID, &output)
 
-	if len(cmdSlice) < 2 {
-		cmd = exec.Command(cmdSlice[0])
-	} else {
-		cmd = exec.Command(cmdSlice[0], cmdSlice[1:]...)
-	}
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	// cmdSlice := strings.Fields(taskCmd)
 
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// var cmd *exec.Cmd
 
-	log.Println("Running task", taskCmd)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println("Error:", err)
-		fmt.Println("Stderr:", stderr.String())
-		wrk.updateTaskStatus(taskID, utils.StatusError, stderr)
-		return
-	}
+	// if len(cmdSlice) < 2 {
+	// 	cmd = exec.Command(cmdSlice[0])
+	// } else {
+	// 	cmd = exec.Command(cmdSlice[0], cmdSlice[1:]...)
+	// }
+	// var stdout bytes.Buffer
+	// var stderr bytes.Buffer
 
-	fmt.Println("Finished task", taskCmd)
-	wrk.updateTaskStatus(taskID, utils.StatusFinished, stdout)
-}
+	// cmd.Stdout = &stdout
+	// cmd.Stderr = &stderr
 
-func (wrk *worker) updateTaskStatus(taskId uuid.UUID, status utils.ObjectStatus, output bytes.Buffer) {
-	type loginParams struct {
-		ID     string `json:"id"`
-		TaskID string `json:"task_id"`
-		Status int32  `json:"status"`
-		Output string `json:"output"`
-	}
+	// log.Println("Running task", taskCmd)
+	// err := cmd.Run()
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	fmt.Println("Stderr:", stderr.String())
+	// 	// wrk.updateTaskStatus(taskID, utils.StatusError, stderr)
+	// 	return
+	// }
 
-	data, _ := json.Marshal(loginParams{
-		ID:     wrk.id.String(),
-		TaskID: taskId.String(),
-		Status: int32(status),
-		Output: output.String(),
-	})
-
-	_, err := http.Post(fmt.Sprintf("http://%s:%s/api/tasks", wrk.srvHost, wrk.srvPort), "application/json", bytes.NewReader(data))
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (wrk *worker) registerWithServer() {
-
-	type loginParams struct {
-		ID   *string `json:"id"`
-		Host string  `json:"host"`
-		Port string  `json:"port"`
-	}
-
-	data, _ := json.Marshal(loginParams{
-		ID:   nil,
-		Host: wrk.host,
-		Port: wrk.port,
-	})
-
-	resp, err := http.Post(fmt.Sprintf("http://%s:%s/api/workers", wrk.srvHost, wrk.srvPort), "application/json", bytes.NewReader(data))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	type respParms struct {
-		ID string `json:"id"`
-	}
-	var parms respParms
-	err = json.NewDecoder(resp.Body).Decode(&parms)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	wrk.id = uuid.MustParse(parms.ID)
+	// fmt.Println("Finished task", taskCmd)
+	// // wrk.updateTaskStatus(taskID, utils.StatusFinished, stdout)
 }

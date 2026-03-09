@@ -1,14 +1,15 @@
 package requests
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
 )
 
-func DecodeRequest[T interface{}](req *http.Request, i T) (T, error) {
+func DecodeJSON[T interface{}](payload []byte, i T) (T, error) {
 	params := i
-	err := json.NewDecoder(req.Body).Decode(&params)
+	err := json.NewDecoder(bytes.NewReader(payload)).Decode(&params)
 	if err != nil {
 		return params, err
 	}

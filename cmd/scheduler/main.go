@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/ju-vfx/task-scheduler/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type appConfig struct {
@@ -89,7 +90,6 @@ func (conf *appConfig) registerHandlers() {
 	http.HandleFunc("POST /api/tasks", conf.handlerUpdateTasks)
 
 	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
-		http.HandleFunc("DELETE /api/workers", conf.handlerDeleteWorkers)
 		http.HandleFunc("DELETE /api/jobs", conf.handlerDeleteJobs)
 	}
 }

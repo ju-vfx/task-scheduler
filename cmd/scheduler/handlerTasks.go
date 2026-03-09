@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"net/http"
 	"time"
@@ -18,8 +19,9 @@ func (conf *appConfig) handlerUpdateTasks(w http.ResponseWriter, req *http.Reque
 		Status int32  `json:"status"`
 		Output string `json:"output"`
 	}
-
-	requestData, err := requests.DecodeRequest(req, updateTaskParams{})
+	var buff bytes.Buffer
+	_ = req.Write(&buff)
+	requestData, err := requests.DecodeJSON(buff.Bytes(), updateTaskParams{})
 	if err != nil {
 		requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
 		return

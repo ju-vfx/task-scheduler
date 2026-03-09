@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+type MessageType int
+
+const (
+	ConnectMessage MessageType = iota
+	StatusMessage
+	TaskMessage
+)
+
 type ObjectStatus int
 
 const (
