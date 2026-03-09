@@ -2,10 +2,6 @@ package main
 
 import "github.com/ju-vfx/task-scheduler/internal/database"
 
-type appConfig struct {
-	db *database.Queries
-}
-
 type server struct {
 	cfg *appConfig
 }

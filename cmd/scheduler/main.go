@@ -1,14 +1,24 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"sync"
 
 	"github.com/joho/godotenv"
 	"github.com/ju-vfx/task-scheduler/internal/database"
 )
+
+type appConfig struct {
+	mu      sync.Mutex
+	db      *database.Queries
+	workers []*worker
+	jobs    []*job
+}
 
 func main() {
 
@@ -22,22 +32,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conf := &appConfig{
-		db: db,
+	conf := appConfig{
+		db:      db,
+		workers: make([]*worker, 0),
+		jobs:    make([]*job, 0),
 	}
 
-	server, err := newServer(conf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	conf.startServer()
+}
 
-	scheduler, err := newScheduler(conf)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (c *appConfig) TryMe() {
 
-	go server.Start()
-	scheduler.Start()
 }
 
 func connectDb() (*database.Queries, error) {
@@ -55,4 +60,36 @@ func connectDb() (*database.Queries, error) {
 	}
 
 	return database.New(db), nil
+}
+
+func (conf *appConfig) startServer() {
+
+	host := os.Getenv("TS_HOST")
+	port := os.Getenv("TS_PORT")
+	addr := fmt.Sprintf("%s:%s", host, port)
+
+	log.Printf("Starting Scheduler Server on http://%s", addr)
+
+	conf.registerHandlers()
+	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
+		_ = conf.db.DeleteJobs(context.Background())
+		_ = conf.db.DeleteWorkers(context.Background())
+	}
+
+	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+func (conf *appConfig) registerHandlers() {
+	http.HandleFunc("GET /api/workers", conf.handlerGetWorkers)
+	http.HandleFunc("/api/registerWorkers", conf.handlerRegisterWorker)
+
+	http.HandleFunc("GET /api/jobs", conf.handlerGetJobs)
+	http.HandleFunc("POST /api/jobs", conf.handlerCreateJob)
+
+	http.HandleFunc("POST /api/tasks", conf.handlerUpdateTasks)
+
+	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
+		http.HandleFunc("DELETE /api/workers", conf.handlerDeleteWorkers)
+		http.HandleFunc("DELETE /api/jobs", conf.handlerDeleteJobs)
+	}
 }

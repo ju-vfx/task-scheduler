@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	"github.com/ju-vfx/task-scheduler/internal/requests"
 	"github.com/ju-vfx/task-scheduler/internal/utils"
@@ -38,14 +40,41 @@ func main() {
 
 	wrk.host = os.Getenv("TS_WORKER_HOST")
 	wrk.port = os.Getenv("TS_WORKER_PORT")
-	addr := fmt.Sprintf("%s:%s", wrk.host, wrk.port)
+	//addr := fmt.Sprintf("%s:%s", wrk.host, wrk.port)
 
-	wrk.registerWithServer()
+	//wrk.registerWithServer()
+	err = wrk.connectToWs()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	http.HandleFunc("POST /api/tasks", wrk.handlerLaunchTask)
+	//http.HandleFunc("POST /api/tasks", wrk.handlerLaunchTask)
 
-	log.Printf("Starting Worker on http://%s", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	//log.Printf("Starting Worker on http://%s", addr)
+	//log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+func (wrk *worker) connectToWs() error {
+	type loginParams struct {
+		Host string `json:"host"`
+		Port string `json:"port"`
+	}
+
+	url := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/api/registerWorkers"}
+	conn, resp, err := websocket.DefaultDialer.Dial(url.String(), nil)
+	if err != nil {
+		fmt.Println(resp.Status)
+		return err
+	}
+	defer conn.Close()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		log.Println(string(msg))
+	}
 }
 
 func (wrk *worker) handlerLaunchTask(w http.ResponseWriter, req *http.Request) {

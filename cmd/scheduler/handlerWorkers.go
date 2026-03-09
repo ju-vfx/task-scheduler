@@ -3,36 +3,33 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/ju-vfx/task-scheduler/internal/database"
+	"github.com/gorilla/websocket"
 	"github.com/ju-vfx/task-scheduler/internal/requests"
 	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
 
-func (srv *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
-	workers, err := srv.cfg.db.GetWorkers(req.Context())
-	if err != nil {
-		requests.RespondWithError(w, http.StatusInternalServerError, "Error loading workers")
-		return
-	}
-	type workerResp struct {
-		ID          string `json:"id"`
-		Host        string `json:"host"`
-		ConnectedAt string `json:"connected_at"`
-		LastSeenAt  string `json:"last_seen_at"`
-		Status      string `json:"status"`
-	}
+type workerResp struct {
+	ID          string `json:"id"`
+	Host        string `json:"host"`
+	ConnectedAt string `json:"connected_at"`
+	LastSeenAt  string `json:"last_seen_at"`
+	Status      string `json:"status"`
+}
+
+func (conf *appConfig) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
 
 	data := make([]workerResp, 0)
 
-	for _, worker := range workers {
+	for _, worker := range conf.workers {
 		w := workerResp{
-			ID:          worker.ID.String(),
-			Host:        worker.Host,
-			ConnectedAt: utils.TimeToString(worker.ConnectedAt),
-			LastSeenAt:  utils.TimeToString(worker.LastSeenAt),
-			Status:      utils.ObjectStatus(worker.Status).String(),
+			ID:          worker.id.String(),
+			Host:        worker.host,
+			ConnectedAt: utils.TimeToString(worker.connectedAt),
+			LastSeenAt:  utils.TimeToString(worker.lastSeenAt),
+			Status:      utils.ObjectStatus(worker.status).String(),
 		}
 
 		data = append(data, w)
@@ -40,41 +37,53 @@ func (srv *server) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
 	requests.RespondWithJSON(w, http.StatusOK, data)
 }
 
-func (srv *server) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
+func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
 
 	type workerParams struct {
-		ID   *string `json:"id"`
-		Host string  `json:"host"`
-		Port string  `json:"port"`
+		Host string `json:"host"`
+		Port string `json:"port"`
 	}
-	reqParams, err := requests.DecodeRequest(req, workerParams{})
+	// reqParams, err := requests.DecodeRequest(req, workerParams{})
+	// if err != nil {
+	// 	requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
+	// 	return
+	// }
+
+	ws, err := UpgradeConnection(w, req)
 	if err != nil {
-		requests.RespondWithError(w, http.StatusBadRequest, "Can't decode Request Body")
+		requests.RespondWithError(w, http.StatusInternalServerError, "Could not connect to websocket")
 		return
 	}
 
-	if reqParams.ID != nil {
-		err = srv.cfg.db.UpdateLastSeen(req.Context(), uuid.MustParse(*reqParams.ID))
-		if err != nil {
-			requests.RespondWithError(w, http.StatusInternalServerError, "Error logging in worker")
-			return
-		}
-	} else {
-		worker, err := srv.cfg.db.CreateWorker(req.Context(), database.CreateWorkerParams{Host: reqParams.Host, Port: reqParams.Port, Status: int32(utils.StatusWaiting)})
-		if err != nil {
-			requests.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("%v+", err))
-			return
-		}
-
-		type respParams struct {
-			ID string `json:"id"`
-		}
-		requests.RespondWithJSON(w, http.StatusOK, respParams{ID: worker.ID.String()})
+	id, _ := uuid.NewUUID()
+	wrk := &worker{
+		id:          id,
+		conn:        ws,
+		host:        "",
+		port:        "",
+		connectedAt: time.Now(),
+		lastSeenAt:  time.Now(),
+		status:      utils.StatusWaiting,
+		task:        "",
 	}
+	conf.workers = append(conf.workers, wrk)
+
+	wrkResp := workerResp{
+		ID:          wrk.id.String(),
+		Host:        wrk.host,
+		ConnectedAt: utils.TimeToString(wrk.connectedAt),
+		LastSeenAt:  utils.TimeToString(wrk.lastSeenAt),
+		Status:      utils.ObjectStatus(wrk.status).String(),
+	}
+
+	wrk.SendWsMessage(wsMessage{message: requests.EncodeJSON(wrkResp), messageType: websocket.BinaryMessage})
+
+	go wrk.ReadWsMessage()
+	fmt.Println(conf.workers)
 }
 
-func (srv *server) handlerDeleteWorkers(w http.ResponseWriter, req *http.Request) {
-	err := srv.cfg.db.DeleteWorkers(req.Context())
+func (conf *appConfig) handlerDeleteWorkers(w http.ResponseWriter, req *http.Request) {
+	err := conf.db.DeleteWorkers(req.Context())
 	if err != nil {
 		requests.RespondWithError(w, http.StatusBadRequest, "Error deleting workers")
 		return

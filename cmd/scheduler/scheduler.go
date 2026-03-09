@@ -14,45 +14,31 @@ import (
 	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
 
-func newScheduler(cfg *appConfig) (*scheduler, error) {
-	sdl := scheduler{
-		cfg:                   cfg,
-		updateIntervalSeconds: 2,
+func (conf *appConfig) Schedule() {
+	conf.mu.Lock()
+	defer conf.mu.Unlock()
+
+	availableWorkers := getAvailableWorkers(conf.workers)
+	if len(availableWorkers) < 1 {
+		return
 	}
-	return &sdl, nil
-}
-
-func (sdl *scheduler) Start() {
-
-	scheduleLoop(sdl, time.Second*time.Duration(sdl.updateIntervalSeconds))
-}
-
-func scheduleLoop(sdl *scheduler, refreshInterval time.Duration) {
-	for {
-		time.Sleep(refreshInterval)
-		waitingJobs := getWaitingJobs(sdl)
-		if len(waitingJobs) < 1 {
-			continue
-		}
-		sdl.updateJobStatus(waitingJobs)
-
-		availableWorkers := getAvailableWorkers(sdl)
-		if len(availableWorkers) < 1 {
-			continue
-		}
-
-		distributeTasks(sdl, waitingJobs, availableWorkers)
+	waitingJobs := getWaitingJobs(conf.db)
+	if len(waitingJobs) < 1 {
+		return
 	}
+	// sdl.updateJobStatus(waitingJobs)
+
+	// distributeTasks(sdl, waitingJobs, availableWorkers)
 }
 
-func getWaitingJobs(sdl *scheduler) []job {
+func getWaitingJobs(db *database.Queries) []job {
 	jobs := make([]job, 0)
-	waitingJobs, err := sdl.cfg.db.GetWaitingJobs(context.Background())
+	waitingJobs, err := db.GetWaitingJobs(context.Background())
 	if err != nil {
 		log.Fatal("Can't load waiting jobs")
 	}
 	for _, waitingJob := range waitingJobs {
-		tasks, err := sdl.cfg.db.GetTasksByJobId(context.Background(), waitingJob.ID)
+		tasks, err := db.GetTasksByJobId(context.Background(), waitingJob.ID)
 		if err != nil {
 			log.Fatal("Error getting Tasks for Job")
 		}
@@ -67,14 +53,10 @@ func getWaitingJobs(sdl *scheduler) []job {
 	return jobs
 }
 
-func getAvailableWorkers(sdl *scheduler) []database.Worker {
-	availableWorkers := make([]database.Worker, 0)
-	workers, err := sdl.cfg.db.GetWorkers(context.Background())
-	if err != nil {
-		log.Fatal("Can't get workers from DB")
-	}
+func getAvailableWorkers(workers []*worker) []*worker {
+	availableWorkers := make([]*worker, 0)
 	for _, worker := range workers {
-		if worker.Status == int32(utils.StatusWaiting) {
+		if worker.status == utils.StatusWaiting {
 			availableWorkers = append(availableWorkers, worker)
 		}
 	}

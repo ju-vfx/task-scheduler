@@ -15,6 +15,15 @@ func DecodeRequest[T interface{}](req *http.Request, i T) (T, error) {
 	return params, nil
 }
 
+func EncodeJSON(payload interface{}) []byte {
+	respData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error Encoding JSON\n")
+		return nil
+	}
+	return respData
+}
+
 func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	type error struct {
 		Error string `json:"error"`

@@ -11,7 +11,7 @@ import (
 	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
 
-func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) {
+func (conf *appConfig) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) {
 	type updateTaskParams struct {
 		ID     string `json:"id"`
 		TaskID string `json:"task_id"`
@@ -27,7 +27,7 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 
 	status := utils.ObjectStatus(requestData.Status)
 
-	err = srv.cfg.db.UpdateWorkerStatus(req.Context(), database.UpdateWorkerStatusParams{ID: uuid.MustParse(requestData.ID), Status: int32(utils.StatusWaiting)})
+	err = conf.db.UpdateWorkerStatus(req.Context(), database.UpdateWorkerStatusParams{ID: uuid.MustParse(requestData.ID), Status: int32(utils.StatusWaiting)})
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update worker status")
 		return
@@ -43,7 +43,7 @@ func (srv *server) handlerUpdateTasks(w http.ResponseWriter, req *http.Request) 
 		taskStatusParms.CancelledAt = sql.NullTime{Time: time.Now(), Valid: true}
 		taskStatusParms.Stderr = sql.NullString{String: requestData.Output, Valid: true}
 	}
-	_, err = srv.cfg.db.UpdateTaskStatus(req.Context(), taskStatusParms)
+	_, err = conf.db.UpdateTaskStatus(req.Context(), taskStatusParms)
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update task status")
 		return

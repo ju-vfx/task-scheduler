@@ -9,8 +9,8 @@ import (
 	"github.com/ju-vfx/task-scheduler/internal/utils"
 )
 
-func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
-	dbJobs, err := srv.cfg.db.GetJobs(req.Context())
+func (conf *appConfig) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
+	dbJobs, err := conf.db.GetJobs(req.Context())
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't load Jobs from DB")
 		return
@@ -36,7 +36,7 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 	}
 	data := make([]respJob, 0)
 	for _, job := range dbJobs {
-		dbTasks, err := srv.cfg.db.GetTasksByJobId(req.Context(), job.ID)
+		dbTasks, err := conf.db.GetTasksByJobId(req.Context(), job.ID)
 		if err != nil {
 			requests.RespondWithError(w, http.StatusInternalServerError, "Can't load Tasks from DB")
 			return
@@ -75,8 +75,8 @@ func (srv *server) handlerGetJobs(w http.ResponseWriter, req *http.Request) {
 	requests.RespondWithJSON(w, http.StatusOK, data)
 }
 
-func (s *server) handlerDeleteJobs(w http.ResponseWriter, req *http.Request) {
-	err := s.cfg.db.DeleteJobs(req.Context())
+func (conf *appConfig) handlerDeleteJobs(w http.ResponseWriter, req *http.Request) {
+	err := conf.db.DeleteJobs(req.Context())
 	if err != nil {
 		requests.RespondWithError(w, http.StatusBadRequest, "Can't delete jobs")
 		return
@@ -93,7 +93,7 @@ type jobParams struct {
 	Tasks    []taskParams `json:"tasks"`
 }
 
-func (srv *server) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
+func (conf *appConfig) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
 
 	requestData, err := requests.DecodeRequest(req, jobParams{})
 	if err != nil {
@@ -101,7 +101,7 @@ func (srv *server) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	job, err := srv.cfg.db.CreateJob(req.Context(), database.CreateJobParams{
+	job, err := conf.db.CreateJob(req.Context(), database.CreateJobParams{
 		Name:     requestData.Name,
 		Status:   int32(utils.StatusWaiting),
 		Priority: int32(requestData.Priority),
@@ -111,17 +111,17 @@ func (srv *server) handlerCreateJob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = createTasks(srv, job.ID, requestData.Tasks, req)
+	err = conf.createTasks(job.ID, requestData.Tasks, req)
 	if err != nil {
 		requests.RespondWithError(w, http.StatusInternalServerError, "Can't create Tasks")
 		return
 	}
 
-	tasks, _ := srv.cfg.db.GetTasks(req.Context())
+	tasks, _ := conf.db.GetTasks(req.Context())
 	requests.RespondWithJSON(w, http.StatusOK, tasks)
 }
 
-func createTasks(srv *server, jobID uuid.UUID, tasks []taskParams, req *http.Request) error {
+func (conf *appConfig) createTasks(jobID uuid.UUID, tasks []taskParams, req *http.Request) error {
 
 	if len(tasks) == 0 || tasks == nil {
 		return nil
@@ -129,7 +129,7 @@ func createTasks(srv *server, jobID uuid.UUID, tasks []taskParams, req *http.Req
 
 	for _, t := range tasks {
 
-		_, err := srv.cfg.db.CreateTask(req.Context(), database.CreateTaskParams{
+		_, err := conf.db.CreateTask(req.Context(), database.CreateTaskParams{
 			Name:    t.Name,
 			Status:  int32(utils.StatusWaiting),
 			Command: t.Command,
