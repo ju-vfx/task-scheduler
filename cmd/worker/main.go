@@ -45,29 +45,9 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	wrk.sendConnectMessage()
 	go wrk.readWsMessages(&wg)
 
 	wg.Wait()
-}
-
-func (wrk *worker) sendConnectMessage() {
-	type connectMessage struct {
-		Type    int               `json:"message_type"`
-		Payload map[string]string `json:"payload"`
-	}
-
-	payload := connectMessage{
-		Type:    int(utils.ConnectMessage),
-		Payload: make(map[string]string, 0),
-	}
-
-	payload.Payload["host"] = "localhost"
-	payload.Payload["port"] = "941241"
-
-	message := requests.EncodeJSON(payload)
-
-	wrk.conn.WriteMessage(websocket.BinaryMessage, message)
 }
 
 func (wrk *worker) readWsMessages(wg *sync.WaitGroup) {

@@ -1,25 +1,4 @@
-### Create worker
-POST http://localhost:8080/api/workers
-Content-Type: application/json
-
-{
-    "host": "testhost",
-    "port": "8412"
-}
-
-### Clear all workers
-DELETE http://localhost:8080/api/workers
-
-
-### List all workers
-GET http://localhost:8080/api/workers
-
-
-### Delete Jobs
-DELETE http://localhost:8080/api/jobs
-
-
-### Create job
+### Create working job
 POST http://localhost:8080/api/jobs
 Content-Type: application/json
 
@@ -38,7 +17,7 @@ Content-Type: application/json
     ]
 }
 
-### Create job 
+### Create error job 
 POST http://localhost:8080/api/jobs
 Content-Type: application/json
 

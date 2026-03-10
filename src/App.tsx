@@ -6,8 +6,8 @@ import WorkerList from "./components/WorkerList";
 function App() {
   const [selection, setSelection] = useState("Jobs");
   const [isConnected, setIsConnected] = useState(false);
-  const [workers, setWorkers] = useState([]);
-  const [jobs, setJobs] = useState([]);
+  const [workers, setWorkers] = useState<any>([]);
+  const [jobs, setJobs] = useState<any>([]);
 
   const connectToWebsocket = () => {
     let socket = new WebSocket("ws://localhost:8080/api/registerClients");
@@ -38,8 +38,9 @@ function App() {
     };
   };
 
-  connectToWebsocket();
-
+  if (!isConnected) {
+    connectToWebsocket();
+  }
   return (
     <>
       <NavBar

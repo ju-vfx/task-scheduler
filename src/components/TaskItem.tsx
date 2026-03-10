@@ -1,6 +1,14 @@
 import TaskDetails from "./TaskDetails";
 
-const TaskItem = ({ item, onSelectTask, selectedTask }) => {
+const TaskItem = ({
+  item,
+  onSelectTask,
+  selectedTask,
+}: {
+  item: any;
+  onSelectTask: Function;
+  selectedTask: any;
+}) => {
   let className = "";
   if (item.task_status === "Finished") {
     className = "status-finished";

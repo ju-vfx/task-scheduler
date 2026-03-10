@@ -2,7 +2,7 @@ import { useState } from "react";
 import JobItem from "./JobItem";
 import "./JobList.css";
 
-const JobList = ({ allJobs }) => {
+const JobList = ({ allJobs }: { allJobs: any }) => {
   const [selectedJob, setSelectedJob] = useState("");
   if (allJobs.length < 1) {
     return <>No jobs available</>;
@@ -28,11 +28,12 @@ const JobList = ({ allJobs }) => {
         </tr>
       </thead>
       <tbody>
-        {allJobs.map((jobItem) => (
+        {allJobs.map((jobItem: any) => (
           <JobItem
             item={jobItem}
             onSelectItem={handleSelectedJob}
             selectedJob={selectedJob}
+            key={jobItem.job_id}
           />
         ))}
       </tbody>

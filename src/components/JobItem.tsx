@@ -1,7 +1,15 @@
 import { useState } from "react";
 import TaskItem from "./TaskItem";
 
-const JobItem = ({ item, onSelectItem, selectedJob }) => {
+const JobItem = ({
+  item,
+  onSelectItem,
+  selectedJob,
+}: {
+  item: any;
+  onSelectItem: Function;
+  selectedJob: any;
+}) => {
   const [selectedTask, setSelectedTask] = useState("");
   const handleSelectedTask = (id: string) => {
     if (selectedTask === id) {
@@ -36,7 +44,7 @@ const JobItem = ({ item, onSelectItem, selectedJob }) => {
       </tr>
       {item.job_tasks.length > 0 && selectedJob === item.job_id && (
         <tr>
-          <td colSpan="5">
+          <td colSpan={5}>
             <table className="table table-sm">
               <thead>
                 <tr>
@@ -47,11 +55,12 @@ const JobItem = ({ item, onSelectItem, selectedJob }) => {
                 </tr>
               </thead>
               <tbody>
-                {item.job_tasks.map((taskItem) => (
+                {item.job_tasks.map((taskItem: any) => (
                   <TaskItem
                     item={taskItem}
                     onSelectTask={handleSelectedTask}
                     selectedTask={selectedTask}
+                    key={taskItem.task_id}
                   />
                 ))}
               </tbody>

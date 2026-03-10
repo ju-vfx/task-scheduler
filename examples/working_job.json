@@ -1,0 +1,14 @@
+{
+    "name": "ping test normal",
+    "priority": 200,
+    "tasks": [
+        {
+        "name": "ping 1",
+        "command": "ping -c 5 google.com"
+        },
+        {
+        "name": "ping localhost",
+        "command": "ping -c 9 127.0.0.1"
+        } 
+    ]
+}

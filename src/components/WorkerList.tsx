@@ -1,11 +1,11 @@
-const WorkerList = ({ allWorkers }) => {
+const WorkerList = ({ allWorkers }: { allWorkers: any }) => {
   if (allWorkers.length < 1) {
     return <>No workers available</>;
   }
   return (
     <table className="table">
       <thead>
-        <tr href="#">
+        <tr>
           <th scope="col">Host</th>
           <th scope="col">Status</th>
           <th scope="col">Last Seen</th>
@@ -13,8 +13,8 @@ const WorkerList = ({ allWorkers }) => {
         </tr>
       </thead>
       <tbody>
-        {allWorkers.map((workerItem) => (
-          <tr>
+        {allWorkers.map((workerItem: any) => (
+          <tr key={workerItem.id}>
             <td>{workerItem.host}</td>
             <td>{workerItem.status}</td>
             <td>{workerItem.last_seen_at}</td>

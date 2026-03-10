@@ -53,8 +53,7 @@ func (conf *appConfig) handlerCreateJob(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	tasks, _ := conf.db.GetTasks(req.Context())
-	requests.RespondWithJSON(w, http.StatusOK, tasks)
+	requests.RespondWithJSON(w, http.StatusOK, job)
 	conf.broadcastJobs()
 	conf.ScheduleTasks()
 }
