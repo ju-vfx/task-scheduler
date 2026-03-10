@@ -23,7 +23,7 @@ Please follow the official docs to install these.
 ## Getting started
 
 > [!CAUTION]
-> Do not run this facing the public internet since it has no concept of security and will > allow for execution of ANY command on your workers!
+> Do not run this facing the public internet since it has no concept of security and will allow for execution of ANY command on your workers!
 
 1. Clone the repository
 2. Rename the `.env.example` to `.env` and enter your own values if preferred
