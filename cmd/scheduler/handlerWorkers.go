@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,24 +20,6 @@ type workerResp struct {
 	Status      string `json:"status"`
 }
 
-func (conf *appConfig) handlerGetWorkers(w http.ResponseWriter, req *http.Request) {
-
-	data := make([]workerResp, 0)
-
-	for _, worker := range conf.workers {
-		w := workerResp{
-			ID:          worker.id.String(),
-			Host:        worker.host,
-			ConnectedAt: utils.TimeToString(worker.connectedAt),
-			LastSeenAt:  utils.TimeToString(worker.lastSeenAt),
-			Status:      utils.ObjectStatus(worker.status).String(),
-		}
-
-		data = append(data, w)
-	}
-	requests.RespondWithJSON(w, http.StatusOK, data)
-}
-
 func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Request) {
 
 	ws, err := UpgradeConnection(w, req)
@@ -44,13 +28,17 @@ func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Re
 		return
 	}
 
+	addrPieces := strings.Split(ws.RemoteAddr().String(), ":")
+	host := addrPieces[0]
+	port := addrPieces[1]
+
 	id, _ := uuid.NewUUID()
 	wrk := &worker{
 		conf:        conf,
 		id:          id,
 		conn:        ws,
-		host:        "",
-		port:        "",
+		host:        host,
+		port:        port,
 		connectedAt: time.Now(),
 		lastSeenAt:  time.Now(),
 		status:      utils.StatusWaiting,
@@ -58,6 +46,8 @@ func (conf *appConfig) handlerRegisterWorker(w http.ResponseWriter, req *http.Re
 	}
 	conf.workers = append(conf.workers, wrk)
 
+	log.Printf("Worker connected: %s:%s", wrk.host, wrk.port)
+	conf.broadcastWorkers()
 	conf.ScheduleTasks()
 	go wrk.ReadWorkerWebsocketMessage()
 

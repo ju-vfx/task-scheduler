@@ -6,6 +6,7 @@ services:
       - ${TS_DB_PORT}:5432
     volumes:
       - db:/data/postgres
+      - ./sql/docker_db_init:/docker-entrypoint-initdb.d # Init the database schema
     environment:
       POSTGRES_PASSWORD: ${TS_DB_PASSWORD}
       POSTGRES_USER: ${TS_DB_USER}

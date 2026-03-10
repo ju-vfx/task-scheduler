@@ -71,8 +71,6 @@ func (w *worker) ReadWorkerWebsocketMessage() {
 		}
 
 		switch jsonMsg.Type {
-		case int(utils.ConnectMessage):
-			w.handleConnectMessage(jsonMsg.Payload)
 		case int(utils.StatusMessage):
 			w.handleStatusMessage(jsonMsg.Payload)
 		default:
@@ -80,13 +78,6 @@ func (w *worker) ReadWorkerWebsocketMessage() {
 		}
 
 	}
-}
-
-func (w *worker) handleConnectMessage(payload map[string]string) {
-	w.host = payload["host"]
-	w.port = payload["port"]
-	log.Printf("Worker connected: %s:%s", w.host, w.port)
-	w.conf.broadcastWorkers()
 }
 
 func (w *worker) handleStatusMessage(payload map[string]string) {

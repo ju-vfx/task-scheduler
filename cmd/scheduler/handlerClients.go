@@ -36,6 +36,8 @@ func (conf *appConfig) handlerRegisterClients(w http.ResponseWriter, req *http.R
 		id:   uuid.New(),
 	}
 	conf.clients = append(conf.clients, client)
+	conf.broadcastWorkers()
+	conf.broadcastJobs()
 
 }
 

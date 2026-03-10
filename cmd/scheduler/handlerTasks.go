@@ -29,11 +29,6 @@ func (conf *appConfig) handlerUpdateTasks(w http.ResponseWriter, req *http.Reque
 
 	status := utils.ObjectStatus(requestData.Status)
 
-	err = conf.db.UpdateWorkerStatus(req.Context(), database.UpdateWorkerStatusParams{ID: uuid.MustParse(requestData.ID), Status: int32(utils.StatusWaiting)})
-	if err != nil {
-		requests.RespondWithError(w, http.StatusInternalServerError, "Can't update worker status")
-		return
-	}
 	taskStatusParms := database.UpdateTaskStatusParams{ID: uuid.MustParse(requestData.TaskID)}
 	switch status {
 	case utils.StatusFinished:

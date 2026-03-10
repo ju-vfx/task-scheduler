@@ -33,12 +33,3 @@ type Task struct {
 	Stderr      sql.NullString
 	JobID       uuid.UUID
 }
-
-type Worker struct {
-	ID          uuid.UUID
-	Host        string
-	Port        string
-	ConnectedAt time.Time
-	LastSeenAt  time.Time
-	Status      int32
-}

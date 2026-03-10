@@ -76,7 +76,6 @@ func (conf *appConfig) startServer() {
 	conf.registerHandlers()
 	if platform := os.Getenv("TS_PLATFORM"); platform == "dev" {
 		_ = conf.db.DeleteJobs(context.Background())
-		_ = conf.db.DeleteWorkers(context.Background())
 	}
 
 	log.Fatal(http.ListenAndServe(addr, nil))
