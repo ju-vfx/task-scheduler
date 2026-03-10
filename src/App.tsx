@@ -8,9 +8,18 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [workers, setWorkers] = useState<any>([]);
   const [jobs, setJobs] = useState<any>([]);
+  //
+  // Change the host and port here if necessary
+  //
+  const host = "localhost";
+  const port = "8080";
+  //
+  //
+  //
 
   const connectToWebsocket = () => {
-    let socket = new WebSocket("ws://localhost:8080/api/registerClients");
+    const addr = "ws://" + host + ":" + port + "/api/registerClients";
+    let socket = new WebSocket(addr);
     console.log("Attempting websocket connection");
     socket.onopen = () => {
       console.log("Successful connection to server");
