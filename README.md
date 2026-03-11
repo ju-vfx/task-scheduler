@@ -6,8 +6,6 @@ This is a project for learning Go and Backend, using React and TS as a frontend.
 
 ![img](task_scheduler_screenshot_01.png)
 
-## Motivation
-
 ## Technologies
 
 - Go
@@ -50,8 +48,3 @@ Please follow the official docs to install these.
 - This is a security nightmare, so adding auth and permissions would be great
 - Supporting nested tasks instead of a flat hierarchy
 - Tidying up more error handling for connection losses
-
-Motivation
-Quick Start
-Usage
-Contributing
