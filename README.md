@@ -1,3 +1,5 @@
+# Distributor
+
 ## Overview
 
 This is a project for learning Go and Backend, using React and TS as a frontend. It is a simple distributed task manager, that supports sending a "Job" with "Tasks" to the scheduler, which then distributes all the available tasks to the worker nodes over the network, based on the creation date and the priority. It also supports showing the status and output of the command in the GUI. The app uses websockets for real-time communication between server, workers, and clients.
